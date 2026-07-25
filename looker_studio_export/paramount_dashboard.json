@@ -1,0 +1,243 @@
+{
+  "name": "Paramount Merchant Navy - Sales Analytics Dashboard",
+  "version": "2.0.0",
+  "lastUpdated": "2026-01-01",
+  "description": "Schema reference for building Looker Studio dashboard",
+  
+  "dataSource": {
+    "name": "Lead_Register_Data",
+    "type": "Google Sheets",
+    "spreadsheet": "Lead_Register",
+    "worksheet": "Form Responses 1",
+    "refreshInterval": "15 minutes"
+  },
+  
+  "fields": {
+    "dimensions": [
+      {"name": "Lead_ID", "type": "TEXT", "description": "Unique identifier PMN-YYYY-XXXX"},
+      {"name": "Candidate Full Name", "type": "TEXT", "description": "Lead name"},
+      {"name": "Email Address", "type": "TEXT", "description": "Contact email"},
+      {"name": "Phone Number", "type": "TEXT", "description": "Contact phone"},
+      {"name": "City / Location", "type": "TEXT", "description": "Geographic location"},
+      {"name": "Course Interested In", "type": "TEXT", "description": "Selected course"},
+      {"name": "How did you hear about us?", "type": "TEXT", "description": "Lead source"},
+      {"name": "Preferred Batch Month", "type": "TEXT", "description": "Intake preference"},
+      {"name": "Current Education Level", "type": "TEXT", "description": "Education background"},
+      {"name": "Counsellor Assigned", "type": "TEXT", "description": "Assigned team member"},
+      {"name": "Status", "type": "TEXT", "description": "Current status in workflow"},
+      {"name": "Timestamp", "type": "DATETIME", "description": "Form submission time"}
+    ],
+    "calculatedFields": [
+      {
+        "name": "Conversion Rate",
+        "formula": "(SUM(CASE WHEN Status = \"Enrolled\" THEN 1 ELSE 0 END) / COUNT(Lead_ID)) * 100",
+        "description": "Percentage of leads converted to enrolled"
+      },
+      {
+        "name": "Active Leads",
+        "formula": "SUM(CASE WHEN Status IN (\"New Lead\", \"Contacted\", \"Interested\", \"Counselling Scheduled\", \"Admission Pending\") THEN 1 ELSE 0 END)",
+        "description": "Leads still in pipeline"
+      },
+      {
+        "name": "Status Order",
+        "formula": "CASE Status WHEN \"New Lead\" THEN 1 WHEN \"Contacted\" THEN 2 WHEN \"Interested\" THEN 3 WHEN \"Counselling Scheduled\" THEN 4 WHEN \"Admission Pending\" THEN 5 WHEN \"Enrolled\" THEN 6 WHEN \"Completed\" THEN 7 WHEN \"Lost\" THEN 8 ELSE 9 END",
+        "description": "Numeric order for funnel sorting"
+      },
+      {
+        "name": "Lead Age Days",
+        "formula": "DATE_DIFF(CURRENT_DATE(), Timestamp)",
+        "description": "Days since lead created"
+      }
+    ]
+  },
+  
+  "pages": [
+    {
+      "number": 1,
+      "name": "Executive Dashboard",
+      "components": [
+        {
+          "type": "Text",
+          "content": "⚓ Paramount Merchant Navy - Executive Dashboard",
+          "style": {"fontSize": "24px", "fontWeight": "bold", "color": "#1a237e"}
+        },
+        {
+          "type": "Scorecard",
+          "title": "Total Leads",
+          "metric": "COUNT(Lead_ID)",
+          "style": {"background": "#1a237e", "textColor": "#ffffff"}
+        },
+        {
+          "type": "Scorecard",
+          "title": "Enrolled",
+          "metric": "COUNT(Lead_ID)",
+          "filter": "Status = 'Enrolled'",
+          "style": {"background": "#28a745", "textColor": "#ffffff"}
+        },
+        {
+          "type": "Scorecard",
+          "title": "Conversion Rate",
+          "metric": "Conversion Rate (calculated field)",
+          "format": "Percentage",
+          "style": {"background": "#ffd700", "textColor": "#1a237e"}
+        },
+        {
+          "type": "Scorecard",
+          "title": "Lost",
+          "metric": "COUNT(Lead_ID)",
+          "filter": "Status = 'Lost'",
+          "style": {"background": "#dc3545", "textColor": "#ffffff"}
+        },
+        {
+          "type": "BarChart",
+          "title": "Lead Status Funnel",
+          "dimension": "Status",
+          "metric": "COUNT(Lead_ID)",
+          "sort": "Status Order (calculated field)",
+          "orientation": "horizontal"
+        },
+        {
+          "type": "TimeSeriesChart",
+          "title": "Weekly Lead Trend",
+          "dimension": "Timestamp",
+          "metric": "COUNT(Lead_ID)",
+          "granularity": "Week",
+          "dateRange": "Last 8 weeks"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Sales Performance",
+      "components": [
+        {
+          "type": "Text",
+          "content": "📈 Sales Performance",
+          "style": {"fontSize": "24px", "fontWeight": "bold", "color": "#1a237e"}
+        },
+        {
+          "type": "ComboChart",
+          "title": "30-Day Lead Trend",
+          "dimension": "Timestamp",
+          "metrics": ["All Leads (bars)", "Enrolled (line)"],
+          "dateRange": "Last 30 days"
+        },
+        {
+          "type": "BarChart",
+          "title": "Lead Sources",
+          "dimension": "How did you hear about us?",
+          "metric": "COUNT(Lead_ID)",
+          "sort": "Descending",
+          "orientation": "horizontal"
+        },
+        {
+          "type": "PieChart",
+          "title": "Status Distribution",
+          "dimension": "Status",
+          "metric": "COUNT(Lead_ID)"
+        },
+        {
+          "type": "Table",
+          "title": "Active Follow-ups",
+          "columns": ["Lead_ID", "Candidate Full Name", "Phone Number", "Counsellor Assigned", "Status"],
+          "filter": "Status NOT IN ('Enrolled', 'Completed', 'Lost')",
+          "sort": "Timestamp descending"
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Team Performance",
+      "components": [
+        {
+          "type": "Text",
+          "content": "👥 Team Performance",
+          "style": {"fontSize": "24px", "fontWeight": "bold", "color": "#1a237e"}
+        },
+        {
+          "type": "BarChart",
+          "title": "Leads by Counsellor",
+          "dimension": "Counsellor Assigned",
+          "metric": "COUNT(Lead_ID)",
+          "sort": "Descending"
+        },
+        {
+          "type": "StackedBarChart",
+          "title": "Status by Counsellor",
+          "dimension": "Counsellor Assigned",
+          "breakdownDimension": "Status",
+          "metric": "COUNT(Lead_ID)"
+        },
+        {
+          "type": "PivotTable",
+          "title": "Counsellor Performance Matrix",
+          "rowDimension": "Counsellor Assigned",
+          "columnDimension": "Status",
+          "metric": "COUNT(Lead_ID)",
+          "showTotals": true
+        },
+        {
+          "type": "Table",
+          "title": "Counsellor Summary",
+          "columns": ["Counsellor Assigned", "Total Leads", "Enrolled", "Lost", "Active"],
+          "groupBy": "Counsellor Assigned"
+        }
+      ]
+    }
+  ],
+  
+  "filters": [
+    {
+      "name": "Date Range",
+      "type": "DateRange",
+      "field": "Timestamp",
+      "default": "Last 30 days",
+      "reportLevel": true
+    },
+    {
+      "name": "Counsellor",
+      "type": "Dropdown",
+      "field": "Counsellor Assigned",
+      "multiSelect": true,
+      "reportLevel": true
+    },
+    {
+      "name": "Status",
+      "type": "Dropdown",
+      "field": "Status",
+      "multiSelect": true,
+      "reportLevel": true
+    },
+    {
+      "name": "Course",
+      "type": "Dropdown",
+      "field": "Course Interested In",
+      "multiSelect": true,
+      "reportLevel": true
+    }
+  ],
+  
+  "theme": {
+    "primaryColor": "#1a237e",
+    "secondaryColor": "#ffd700",
+    "backgroundColor": "#f5f5f5",
+    "fontFamily": "Roboto",
+    "statusColors": {
+      "New Lead": "#17a2b8",
+      "Contacted": "#9c27b0",
+      "Interested": "#fd7e14",
+      "Counselling Scheduled": "#2196f3",
+      "Admission Pending": "#ff9800",
+      "Enrolled": "#28a745",
+      "Completed": "#388e3c",
+      "Lost": "#dc3545"
+    }
+  },
+  
+  "notes": [
+    "This JSON is a reference schema - Looker Studio does not support JSON import",
+    "Use this as a guide to manually build the dashboard",
+    "See README_LOOKER.md for step-by-step instructions",
+    "See calculated_fields.md for copy-paste formulas"
+  ]
+}

@@ -1,0 +1,166 @@
+# ============================================================================
+# PARAMOUNT MERCHANT NAVY CRM - GITIGNORE
+# ============================================================================
+# This file specifies intentionally untracked files that Git should ignore.
+# ============================================================================
+
+# ====================
+# Python
+# ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# ====================
+# Environment Variables
+# ====================
+.env
+.env.local
+.env.*.local
+*.env
+env.json
+secrets.json
+
+# ====================
+# IDE & Editors
+# ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ====================
+# OS Generated
+# ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ====================
+# Secrets & Credentials
+# ====================
+# IMPORTANT: Never commit these files!
+*.json
+!looker_studio_export/*.json
+!package.json
+!package-lock.json
+service-account*.json
+credentials.json
+client_secret*.json
+token.json
+*.pem
+*.key
+*.p12
+
+# ====================
+# Logs
+# ====================
+*.log
+logs/
+log/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ====================
+# Local Config
+# ====================
+# Don't commit local configuration overrides
+dashboard_ui/config.local.js
+config.local.py
+local_settings.py
+
+# ====================
+# Test & Coverage
+# ====================
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ====================
+# Build Outputs
+# ====================
+build/
+dist/
+out/
+*.build/
+
+# ====================
+# Archive Files
+# ====================
+archive_report_*.txt
+
+# ====================
+# Temporary Files
+# ====================
+*.tmp
+*.temp
+*.bak
+*.backup
+~$*
+
+# ====================
+# Node.js (if any)
+# ====================
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ====================
+# Documentation Build
+# ====================
+docs/_build/
+site/
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# 1. Add any sensitive files to this list before committing
+# 2. Use `git status` to verify files are being ignored
+# 3. If you've already committed a file, use:
+#    git rm --cached <filename>
+# 4. For JSON files that SHOULD be tracked, use negation (!)
+# ============================================================================

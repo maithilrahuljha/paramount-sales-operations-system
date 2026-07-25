@@ -1,0 +1,91 @@
+# ============================================================================
+# PARAMOUNT MERCHANT NAVY - HOURLY KPI AGGREGATION WORKFLOW
+# ============================================================================
+# Purpose: Calculates KPIs and refreshes dashboard data every hour
+# Schedule: Runs every hour on the hour
+# Author: Paramount Merchant Navy CRM System
+# ============================================================================
+
+name: 📊 Hourly KPI Aggregation
+
+on:
+  # Scheduled trigger - runs every hour
+  schedule:
+    - cron: '0 * * * *'
+  
+  # Manual trigger - allows running from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      full_recalculation:
+        description: 'Perform full historical recalculation'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+# Environment variables available to all jobs
+env:
+  PYTHON_VERSION: '3.10'
+  TZ: 'Asia/Kolkata'
+
+jobs:
+  aggregate-kpis:
+    name: 📈 Calculate & Aggregate KPIs
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout repository code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python environment
+      - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      # Step 3: Install Python dependencies
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run the KPI aggregation script
+      - name: 📊 Aggregate KPIs
+        env:
+          # Google Service Account credentials (JSON format)
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          # Google Drive folder containing CRM spreadsheets
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+          # Full recalculation flag from manual trigger
+          FULL_RECALCULATION: ${{ github.event.inputs.full_recalculation || 'false' }}
+        run: |
+          echo "📊 Starting KPI Aggregation..."
+          echo "⏰ Current Time (IST): $(TZ='Asia/Kolkata' date)"
+          echo "📁 Processing spreadsheets in Drive folder..."
+          python scripts/google_sheets_connector.py
+          echo "✅ KPI Aggregation completed!"
+
+      # Step 5: Report status
+      - name: 📋 Report Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ KPI aggregation completed successfully!"
+            echo "📊 Dashboard data has been refreshed."
+          else
+            echo "❌ KPI aggregation failed. Check logs above."
+          fi
+
+      # Step 6: Upload logs as artifact (for debugging)
+      - name: 📁 Upload Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpi-aggregation-logs-${{ github.run_id }}
+          path: |
+            *.log
+          retention-days: 3

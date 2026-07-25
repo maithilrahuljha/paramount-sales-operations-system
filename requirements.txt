@@ -1,0 +1,82 @@
+# ============================================================================
+# PARAMOUNT MERCHANT NAVY - PYTHON DEPENDENCIES
+# ============================================================================
+# This file lists all Python packages required for the CRM automation scripts.
+# Install with: pip install -r requirements.txt
+# ============================================================================
+
+# Google API Libraries
+# --------------------
+# gspread: Python API for Google Sheets
+gspread>=5.7.0
+
+# Google Authentication
+google-auth>=2.0.0
+google-auth-oauthlib>=0.4.0
+google-auth-httplib2>=0.1.0
+
+# OAuth2 Client (legacy, for compatibility)
+oauth2client>=4.1.3
+
+# Google API Python Client
+google-api-python-client>=2.0.0
+
+# HTTP Requests
+# -------------
+# For Slack webhook and external API calls
+requests>=2.31.0
+
+# Environment Variables
+# ---------------------
+# For loading .env files in local development
+python-dotenv>=1.0.0
+
+# Date/Time Handling
+# ------------------
+# For timezone-aware datetime operations
+pytz>=2023.3
+
+# Additional Utilities
+# --------------------
+# For better CSV parsing
+pandas>=2.0.0
+
+# For retry logic on API calls
+tenacity>=8.0.0
+
+# ============================================================================
+# OPTIONAL DEPENDENCIES (uncomment if needed)
+# ============================================================================
+
+# For creating Excel reports
+# openpyxl>=3.1.0
+
+# For sending HTML emails with templates
+# jinja2>=3.1.0
+
+# For data validation
+# pydantic>=2.0.0
+
+# For logging to external services
+# sentry-sdk>=1.0.0
+
+# ============================================================================
+# DEVELOPMENT DEPENDENCIES (for local testing)
+# ============================================================================
+
+# For running tests
+# pytest>=7.0.0
+
+# For code formatting
+# black>=23.0.0
+
+# For linting
+# flake8>=6.0.0
+
+# ============================================================================
+# VERSION NOTES
+# ============================================================================
+# - Python 3.10+ is required
+# - All versions are minimum requirements
+# - Run `pip freeze > requirements-lock.txt` to lock exact versions
+# ============================================================================

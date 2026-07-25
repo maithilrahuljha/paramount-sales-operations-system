@@ -1,0 +1,94 @@
+# ============================================================================
+# PARAMOUNT MERCHANT NAVY - MORNING BRIEFING WORKFLOW
+# ============================================================================
+# Purpose: Sends daily morning briefing at 8:30 AM IST via Slack and Email
+# Schedule: Runs daily at 3:00 AM UTC (8:30 AM IST)
+# Author: Paramount Merchant Navy CRM System
+# ============================================================================
+
+name: 📬 Morning Briefing
+
+on:
+  # Scheduled trigger - runs at 8:30 AM IST (3:00 AM UTC)
+  schedule:
+    - cron: '30 3 * * *'
+  
+  # Manual trigger - allows running from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Run in test mode (no actual notifications)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+# Environment variables available to all jobs
+env:
+  PYTHON_VERSION: '3.10'
+  TZ: 'Asia/Kolkata'
+
+jobs:
+  send-morning-briefing:
+    name: 🌅 Send Morning Briefing
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout repository code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python environment
+      - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      # Step 3: Install Python dependencies
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run the morning briefing script
+      - name: 📤 Send Morning Briefing
+        env:
+          # Google Service Account credentials (JSON format)
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          # Google Drive folder containing CRM spreadsheets
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+          # Slack webhook URL for notifications
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # Gmail credentials for email fallback
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          # Test mode flag from manual trigger
+          TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
+        run: |
+          echo "🌅 Starting Morning Briefing..."
+          echo "📅 Current Date/Time (IST): $(TZ='Asia/Kolkata' date)"
+          python scripts/send_slack_email.py
+          echo "✅ Morning Briefing completed!"
+
+      # Step 5: Report status
+      - name: 📊 Report Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Morning briefing sent successfully!"
+          else
+            echo "❌ Morning briefing failed. Check logs above."
+          fi
+
+      # Step 6: Upload logs as artifact (for debugging)
+      - name: 📁 Upload Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: morning-briefing-logs
+          path: |
+            *.log
+          retention-days: 7

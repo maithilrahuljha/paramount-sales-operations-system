@@ -1,0 +1,105 @@
+# ============================================================================
+# PARAMOUNT MERCHANT NAVY - MONTHLY ARCHIVE WORKFLOW
+# ============================================================================
+# Purpose: Archives completed/enrolled leads on the 1st of every month
+# Schedule: Runs at midnight on the 1st of every month
+# Author: Paramount Merchant Navy CRM System
+# ============================================================================
+
+name: 🗄️ Monthly Lead Archive
+
+on:
+  # Scheduled trigger - runs on 1st of every month at midnight UTC
+  schedule:
+    - cron: '0 0 1 * *'
+  
+  # Manual trigger - allows running from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (preview without archiving)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      archive_status:
+        description: 'Which statuses to archive'
+        required: false
+        default: 'enrolled_completed'
+        type: choice
+        options:
+          - 'enrolled_completed'
+          - 'enrolled_only'
+          - 'completed_only'
+
+# Environment variables available to all jobs
+env:
+  PYTHON_VERSION: '3.10'
+  TZ: 'Asia/Kolkata'
+
+jobs:
+  archive-leads:
+    name: 🗄️ Archive Completed Leads
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout repository code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python environment
+      - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      # Step 3: Install Python dependencies
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run the archive script
+      - name: 🗄️ Archive Leads
+        env:
+          # Google Service Account credentials (JSON format)
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          # Google Drive folder containing CRM spreadsheets
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+          # Dry run flag from manual trigger
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          # Archive status filter
+          ARCHIVE_STATUS: ${{ github.event.inputs.archive_status || 'enrolled_completed' }}
+        run: |
+          echo "🗄️ Starting Monthly Archive Process..."
+          echo "📅 Archive Date: $(TZ='Asia/Kolkata' date)"
+          echo "🔍 Dry Run Mode: $DRY_RUN"
+          echo "📋 Archive Status Filter: $ARCHIVE_STATUS"
+          python scripts/archive_leads.py
+          echo "✅ Archive process completed!"
+
+      # Step 5: Report status
+      - name: 📋 Report Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Monthly archive completed successfully!"
+            echo "📊 Archived leads have been moved to Archive sheet."
+          else
+            echo "❌ Monthly archive failed. Check logs above."
+            echo "⚠️ No data was modified due to error."
+          fi
+
+      # Step 6: Upload archive report as artifact
+      - name: 📁 Upload Archive Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monthly-archive-report-${{ github.run_id }}
+          path: |
+            *.log
+            archive_report_*.txt
+          retention-days: 30

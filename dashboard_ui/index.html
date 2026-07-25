@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Paramount Merchant Navy - Sales Operations Dashboard">
+    <meta name="theme-color" content="#1a237e">
+    
+    <title>Paramount Merchant Navy | Sales Dashboard</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ============================================ -->
+    <!-- HEADER / NAVIGATION -->
+    <!-- ============================================ -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">⚓</span>
+                <div class="logo-text">
+                    <h1>Paramount Merchant Navy</h1>
+                    <span class="tagline">Sales Operations Dashboard</span>
+                </div>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
+                <button class="nav-btn" data-view="leads">📋 All Leads</button>
+                <button class="nav-btn" data-view="followups">📞 Follow-ups</button>
+                <button id="quickAddBtn" class="btn btn-primary">
+                    <span class="btn-icon">+</span>
+                    New Lead
+                </button>
+            </nav>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav" id="mobileNav">
+        <button class="mobile-nav-btn active" data-view="dashboard">📊 Dashboard</button>
+        <button class="mobile-nav-btn" data-view="leads">📋 All Leads</button>
+        <button class="mobile-nav-btn" data-view="followups">📞 Follow-ups</button>
+        <button id="quickAddBtnMobile" class="btn btn-primary btn-block">
+            <span class="btn-icon">+</span>
+            New Lead
+        </button>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MAIN CONTENT -->
+    <!-- ============================================ -->
+    <main class="main-content">
+        <!-- Loading State -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Loading dashboard data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-banner" id="errorBanner" style="display: none;">
+            <span class="error-icon">⚠️</span>
+            <span class="error-message" id="errorMessage">Unable to fetch data. Please check your connection.</span>
+            <button class="btn btn-sm" id="retryBtn">Retry</button>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DASHBOARD VIEW -->
+        <!-- ============================================ -->
+        <div id="dashboardView" class="view-container">
+            <div class="dashboard-grid">
+                <!-- LEFT COLUMN - KPI CARDS -->
+                <section class="kpi-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">📊</span>
+                        Key Performance Indicators
+                    </h2>
+                    
+                    <div class="kpi-grid">
+                        <!-- Today's New Leads -->
+                        <div class="kpi-card kpi-primary">
+                            <div class="kpi-icon">📥</div>
+                            <div class="kpi-content">
+                                <span class="kpi-value" id="todaysLeads">--</span>
+                                <span class="kpi-label">Today's New Leads</span>
+                            </div>
+                        </div>
+
+                        <!-- Total Leads -->
+                        <div class="kpi-card">
+                            <div class="kpi-icon">📋</div>
+                            <div class="kpi-content">
+                                <span class="kpi-value" id="totalLeads">--</span>
+                                <span class="kpi-label">Total Leads</span>
+                            </div>
+                        </div>
+
+                        <!-- Enrolled Count -->
+                        <div class="kpi-card kpi-success">
+                            <div class="kpi-icon">🎓</div>
+                            <div class="kpi-content">
+                                <span class="kpi-value" id="enrolledCount">--</span>
+                                <span class="kpi-label">Enrolled</span>
+                            </div>
+                        </div>
+
+                        <!-- Conversion Rate -->
+                        <div class="kpi-card kpi-highlight">
+                            <div class="kpi-icon">📈</div>
+                            <div class="kpi-content">
+                                <span class="kpi-value" id="conversionRate">--%</span>
+                                <span class="kpi-label">Conversion Rate</span>
+                            </div>
+                            <div class="kpi-progress">
+                                <div class="progress-bar" id="conversionProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Follow-ups -->
+                        <div class="kpi-card kpi-warning">
+                            <div class="kpi-icon">📞</div>
+                            <div class="kpi-content">
+                                <span class="kpi-value" id="pendingFollowups">--</span>
+                                <span class="kpi-label">Pending Follow-ups</span>
+                            </div>
+                        </div>
+
+                        <!-- Lost Leads -->
+                        <div class="kpi-card kpi-danger">
+                            <div class="kpi-icon">❌</div>
+                            <div class="kpi-content">
+                                <span class="kpi-value" id="lostCount">--</span>
+                                <span class="kpi-label">Lost</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Funnel -->
+                    <div class="funnel-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">🔄</span>
+                            Lead Status Funnel
+                        </h3>
+                        <div class="status-funnel" id="statusFunnel">
+                            <!-- Funnel items will be dynamically inserted -->
+                        </div>
+                    </div>
+
+                    <!-- Lead Source Breakdown -->
+                    <div class="breakdown-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">📊</span>
+                            Lead Source Breakdown
+                        </h3>
+                        <div class="source-breakdown" id="sourceBreakdown">
+                            <div class="source-item">
+                                <span class="source-name">Loading...</span>
+                                <span class="source-count">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- RIGHT COLUMN - PRIORITY FOLLOW-UPS -->
+                <section class="followup-section">
+                    <h2 class="section-title">
+                        <span class="section-icon">📞</span>
+                        Priority Follow-ups
+                        <span class="badge badge-warning" id="followupBadge">0</span>
+                    </h2>
+
+                    <!-- Filter Tabs -->
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">All</button>
+                        <button class="filter-tab" data-filter="new">New Lead</button>
+                        <button class="filter-tab" data-filter="contacted">Contacted</button>
+                        <button class="filter-tab" data-filter="interested">Interested</button>
+                        <button class="filter-tab" data-filter="scheduled">Scheduled</button>
+                    </div>
+
+                    <!-- Follow-up List -->
+                    <div class="followup-list" id="followupList">
+                        <div class="followup-empty">
+                            <span class="empty-icon">📭</span>
+                            <p>Loading follow-ups...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ALL LEADS VIEW -->
+        <!-- ============================================ -->
+        <div id="leadsView" class="view-container" style="display: none;">
+            <div class="leads-header">
+                <h2 class="section-title">
+                    <span class="section-icon">📋</span>
+                    All Leads
+                    <span class="badge" id="leadsBadge">0</span>
+                </h2>
+                <div class="leads-search">
+                    <input type="text" id="leadSearch" placeholder="Search by name, phone, or Lead ID..." class="search-input">
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Statuses</option>
+                        <option value="New Lead">New Lead</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Interested">Interested</option>
+                        <option value="Counselling Scheduled">Counselling Scheduled</option>
+                        <option value="Admission Pending">Admission Pending</option>
+                        <option value="Enrolled">Enrolled</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Lost">Lost</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="leads-table-container">
+                <table class="leads-table" id="leadsTable">
+                    <thead>
+                        <tr>
+                            <th>Lead ID</th>
+                            <th>Candidate Name</th>
+                            <th>Phone</th>
+                            <th>Course</th>
+                            <th>Counsellor</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTableBody">
+                        <!-- Table rows will be dynamically inserted -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- FOLLOW-UPS VIEW -->
+        <!-- ============================================ -->
+        <div id="followupsView" class="view-container" style="display: none;">
+            <div class="followups-header">
+                <h2 class="section-title">
+                    <span class="section-icon">📞</span>
+                    Follow-up Tracker
+                </h2>
+            </div>
+            
+            <div class="followups-grid" id="followupsGrid">
+                <!-- Followup cards will be dynamically inserted -->
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- QUICK STATS BAR -->
+        <!-- ============================================ -->
+        <section class="quick-stats-bar">
+            <div class="quick-stat">
+                <span class="quick-stat-label">New Leads</span>
+                <span class="quick-stat-value" id="newLeadCount">--</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">Contacted</span>
+                <span class="quick-stat-value" id="contactedCount">--</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">Interested</span>
+                <span class="quick-stat-value" id="interestedCount">--</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">Scheduled</span>
+                <span class="quick-stat-value" id="scheduledCount">--</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">Pending</span>
+                <span class="quick-stat-value" id="pendingCount">--</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============================================ -->
+    <!-- EDIT LEAD MODAL -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="editModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span id="editLeadId">PMN-2026-0001</span>
+                    <span class="status-badge" id="currentStatusBadge">New Lead</span>
+                </h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Lead Info -->
+                <div class="lead-info-card">
+                    <div class="lead-info-row">
+                        <span class="lead-info-label">👤 Candidate:</span>
+                        <span class="lead-info-value" id="editCandidateName">--</span>
+                    </div>
+                    <div class="lead-info-row">
+                        <span class="lead-info-label">📞 Phone:</span>
+                        <span class="lead-info-value" id="editPhone">--</span>
+                    </div>
+                    <div class="lead-info-row">
+                        <span class="lead-info-label">📧 Email:</span>
+                        <span class="lead-info-value" id="editEmail">--</span>
+                    </div>
+                    <div class="lead-info-row">
+                        <span class="lead-info-label">📚 Course:</span>
+                        <span class="lead-info-value" id="editCourse">--</span>
+                    </div>
+                    <div class="lead-info-row">
+                        <span class="lead-info-label">🏙️ City:</span>
+                        <span class="lead-info-value" id="editCity">--</span>
+                    </div>
+                    <div class="lead-info-row">
+                        <span class="lead-info-label">👨‍💼 Counsellor:</span>
+                        <span class="lead-info-value" id="editCounsellor">--</span>
+                    </div>
+                </div>
+
+                <!-- Status Update -->
+                <div class="status-update-section">
+                    <h4>Update Status</h4>
+                    <div class="status-workflow">
+                        <button class="status-btn" data-status="New Lead">New Lead</button>
+                        <span class="status-arrow">→</span>
+                        <button class="status-btn" data-status="Contacted">Contacted</button>
+                        <span class="status-arrow">→</span>
+                        <button class="status-btn" data-status="Interested">Interested</button>
+                        <span class="status-arrow">→</span>
+                        <button class="status-btn" data-status="Counselling Scheduled">Counselling Scheduled</button>
+                        <span class="status-arrow">→</span>
+                        <button class="status-btn" data-status="Admission Pending">Admission Pending</button>
+                    </div>
+                    <div class="status-final">
+                        <button class="status-btn status-success" data-status="Enrolled">✓ Enrolled</button>
+                        <button class="status-btn status-success" data-status="Completed">✓ Completed</button>
+                        <button class="status-btn status-danger" data-status="Lost">✗ Lost</button>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="notes-section">
+                    <label for="updateNotes">Add Notes (optional):</label>
+                    <textarea id="updateNotes" rows="3" placeholder="Enter follow-up notes..."></textarea>
+                </div>
+
+                <!-- Previous Remarks -->
+                <div class="remarks-section">
+                    <h4>Previous Remarks</h4>
+                    <div class="remarks-content" id="previousRemarks">
+                        No previous remarks
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelEdit">Cancel</button>
+                <button class="btn btn-primary" id="saveStatus" disabled>
+                    <span class="btn-icon">💾</span>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- FOOTER -->
+    <!-- ============================================ -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <p class="copyright">© 2026 Paramount Merchant Navy</p>
+            </div>
+            <div class="footer-center">
+                <p class="last-updated">
+                    <span class="update-icon">🔄</span>
+                    Last updated: <span id="lastUpdated">--</span>
+                </p>
+            </div>
+            <div class="footer-right">
+                <p class="auto-refresh">
+                    Auto-refresh: <span id="refreshStatus">Active</span>
+                    <span class="refresh-indicator"></span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============================================ -->
+    <!-- SCRIPTS -->
+    <!-- ============================================ -->
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
