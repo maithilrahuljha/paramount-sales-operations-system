@@ -1,0 +1,1489 @@
+================================================================================
+⚓ PARAMOUNT MERCHANT NAVY - COMPLETE INSTALLATION GUIDE
+================================================================================
+
+Welcome! 👋
+
+This guide will help you set up the entire Sales Operations CRM System from 
+scratch. Don't worry if you've never done anything like this before - we'll 
+go through every single step together!
+
+☕ Grab a cup of coffee, set aside about 2-3 hours, and let's get started!
+
+================================================================================
+📋 TABLE OF CONTENTS
+================================================================================
+
+   PART 1: Understanding What We're Building .............. Line 50
+   PART 2: Creating Your Google Account Setup ............. Line 120
+   PART 3: Setting Up Google Sheets ....................... Line 200
+   PART 4: Creating Google Forms .......................... Line 450
+   PART 5: Linking Forms to Sheets ........................ Line 650
+   PART 6: Publishing Sheets for Dashboard ................ Line 750
+   PART 7: Google Cloud Setup (Service Account) ........... Line 850
+   PART 8: Creating GitHub Account ........................ Line 1100
+   PART 9: Creating GitHub Repository ..................... Line 1200
+   PART 10: Uploading Files to GitHub ..................... Line 1350
+   PART 11: Setting Up GitHub Secrets ..................... Line 1500
+   PART 12: Enabling GitHub Pages (Dashboard) ............. Line 1700
+   PART 13: Installing Apps Script ........................ Line 1800
+   PART 14: Testing Everything ............................ Line 1950
+   PART 15: Daily Usage Guide ............................. Line 2100
+   TROUBLESHOOTING ........................................ Line 2250
+
+================================================================================
+📖 PART 1: UNDERSTANDING WHAT WE'RE BUILDING
+================================================================================
+
+🤔 What is this system?
+
+Think of it like a smart assistant that helps you:
+
+   ✅ Capture new student leads through a form
+   ✅ Automatically organize all leads in a spreadsheet
+   ✅ Give each lead a unique ID (like PMN-2026-0001)
+   ✅ Show you a beautiful dashboard with charts and numbers
+   ✅ Send you a morning report every day at 8:30 AM
+   ✅ Keep track of who needs follow-up calls
+   ✅ Archive old leads automatically every month
+
+🧩 The pieces we'll set up:
+
+   📝 Google Forms    = Where new leads fill in their information
+   📊 Google Sheets   = Where all the data is stored (like Excel)
+   🤖 Apps Script     = A small program that creates Lead IDs automatically
+   🌐 GitHub Pages    = Where your dashboard website will live
+   ⚙️ GitHub Actions  = Robots that run tasks automatically (morning reports, etc.)
+   📈 Looker Studio   = Advanced charts and reports (we'll do this last)
+
+💰 Cost: COMPLETELY FREE! 
+
+All these tools are free to use. You won't need to pay anything.
+
+🔐 Is it safe?
+
+Yes! Your data stays in YOUR Google account. You control who can see it.
+
+
+================================================================================
+📧 PART 2: CREATING YOUR GOOGLE ACCOUNT SETUP
+================================================================================
+
+If you already have a Google account (Gmail), you can skip to PART 3.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 2.1: Create a Google Account (Skip if you have Gmail)
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open your web browser (Chrome, Firefox, Edge, or Safari)
+
+2. Go to: https://accounts.google.com/signup
+
+3. You'll see a form asking for:
+   
+   • First name: [Type your first name]
+   • Last name: [Type your last name]
+   • Username: [This will be your email, like: paramountsales@gmail.com]
+   • Password: [Choose something you'll remember, at least 8 characters]
+   • Confirm password: [Type the same password again]
+
+4. Click the blue "Next" button
+
+5. You'll be asked for:
+   • Phone number (for account recovery - recommended)
+   • Recovery email (optional)
+   • Birth date
+   • Gender
+
+6. Click "Next"
+
+7. Read and accept the Terms of Service
+
+8. Click "I agree"
+
+🎉 Congratulations! You now have a Google account!
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 2.2: Sign into Google Drive
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to: https://drive.google.com
+
+2. If asked to sign in, enter:
+   • Email: [your new Gmail address]
+   • Password: [your password]
+
+3. You should now see Google Drive - it looks like a file manager with 
+   folders and files.
+
+✅ You're now ready to create your CRM spreadsheets!
+
+
+================================================================================
+📊 PART 3: SETTING UP GOOGLE SHEETS
+================================================================================
+
+We need to create a folder and some spreadsheets. Think of this like 
+creating folders and files on your computer, but online.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3.1: Create the Main Folder
+───────────────────────────────────────────────────────────────────────────────
+
+1. Make sure you're on Google Drive (https://drive.google.com)
+
+2. Look for a button that says "+ New" (usually top-left corner with a + sign)
+
+3. Click "+ New"
+
+4. A menu will appear. Click "New folder"
+
+5. A small box will pop up asking for the folder name
+
+6. Type exactly: Paramount_CRM_Data
+
+7. Click "Create"
+
+8. You'll see your new folder appear in the list
+
+9. DOUBLE-CLICK on the folder to open it (go inside it)
+
+📍 You should now be INSIDE the Paramount_CRM_Data folder
+   (You can tell by looking at the top - it should show the folder name)
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3.2: Create the Lead Register Spreadsheet
+───────────────────────────────────────────────────────────────────────────────
+
+1. Make sure you're INSIDE the Paramount_CRM_Data folder
+
+2. Click "+ New" again
+
+3. This time, click "Google Sheets"
+
+4. A new spreadsheet will open in a new tab
+
+5. Look at the top-left corner - you'll see "Untitled spreadsheet"
+   Click on those words
+
+6. Type exactly: Lead_Register
+
+7. Press Enter (the name is now saved)
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3.3: Add Column Headers to Lead Register
+───────────────────────────────────────────────────────────────────────────────
+
+Now we need to add the column titles. These MUST be exact!
+
+1. Click on cell A1 (the very first cell, top-left)
+
+2. Type: Lead_ID
+
+3. Press the TAB key on your keyboard (this moves to the next cell)
+
+4. Type: Candidate Full Name
+
+5. Press TAB
+
+6. Continue typing these headers, pressing TAB after each one:
+
+   Cell A1:  Lead_ID
+   Cell B1:  Candidate Full Name
+   Cell C1:  Email Address
+   Cell D1:  Phone Number
+   Cell E1:  City / Location
+   Cell F1:  Course Interested In
+   Cell G1:  How did you hear about us?
+   Cell H1:  Preferred Batch Month
+   Cell I1:  Current Education Level
+   Cell J1:  Counsellor Assigned
+   Cell K1:  Additional Remarks
+   Cell L1:  Status
+
+7. After typing "Status" in L1, press Enter
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3.4: Format the Header Row (Make it look nice)
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click on the "1" on the left side (this selects the entire row 1)
+   The whole row should turn blue/highlighted
+
+2. Look for the paint bucket icon in the toolbar (Fill color)
+   Click the small arrow next to it
+
+3. Choose a dark blue color (like navy blue)
+
+4. The row is now dark blue, but you can't see the text!
+
+5. Look for the "A" with a colored bar under it (Text color)
+   Click the small arrow next to it
+
+6. Choose WHITE
+
+7. Now look for the "B" button (Bold)
+   Click it to make the text bold
+
+8. Your header row should now look professional! 
+   Dark blue background, white bold text.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3.5: Freeze the Header Row
+───────────────────────────────────────────────────────────────────────────────
+
+"Freezing" means the header row will always stay visible when you scroll down.
+
+1. Click on "View" in the menu bar (top of screen)
+
+2. Click on "Freeze"
+
+3. Click on "1 row"
+
+✅ Done! Now when you have many leads, you'll always see the headers.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3.6: Save the Spreadsheet ID (IMPORTANT!)
+───────────────────────────────────────────────────────────────────────────────
+
+We need to save the spreadsheet's unique ID for later.
+
+1. Look at your browser's address bar (where the website URL is shown)
+
+2. You'll see something like:
+   https://docs.google.com/spreadsheets/d/1ABC123XYZ.../edit
+
+3. The long string of letters and numbers after "/d/" is your Spreadsheet ID
+   In this example, it would be: 1ABC123XYZ...
+
+4. Open Notepad (Windows) or TextEdit (Mac) or any text app
+
+5. Create a new file and write:
+
+   ============================================
+   MY PARAMOUNT CRM - IMPORTANT IDs
+   (Keep this file safe!)
+   ============================================
+   
+   Lead_Register Spreadsheet ID:
+   [Paste your ID here]
+   
+   Lead_Register URL:
+   [Paste the full URL here]
+
+6. Save this file somewhere safe - you'll need these IDs later!
+
+
+================================================================================
+📝 PART 4: CREATING GOOGLE FORMS
+================================================================================
+
+Now we'll create the form that captures new leads. This is like a digital 
+questionnaire that students will fill out.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 4.1: Open Google Forms
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open a new browser tab
+
+2. Go to: https://forms.google.com
+
+3. You should see a page with form templates
+
+4. Click the big "+" button or "Blank" to create a new form
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 4.2: Name the Form
+───────────────────────────────────────────────────────────────────────────────
+
+1. At the top, click on "Untitled form"
+
+2. Type: Paramount Merchant Navy - Lead Intake Form
+
+3. Click in the description area below and type:
+   Please fill in your details and we will contact you shortly.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 4.3: Add Questions (Follow this EXACTLY)
+───────────────────────────────────────────────────────────────────────────────
+
+We'll add each question one by one. Take your time!
+
+📌 QUESTION 1: Candidate Full Name
+
+1. You'll see a question box that says "Untitled Question"
+
+2. Click on "Untitled Question" and type: Candidate Full Name
+
+3. On the right side, you'll see a dropdown (probably says "Multiple choice")
+   Click it and select "Short answer"
+
+4. At the bottom right of the question box, you'll see "Required"
+   Click the toggle switch to turn it ON (it should turn purple/blue)
+
+📌 QUESTION 2: Email Address
+
+1. Look at the right side of the question box - there's a "+" icon
+   OR hover over the question box and click the "+" that appears
+
+2. Click "+" to add a new question
+
+3. Type: Email Address
+
+4. Set type to: Short answer
+
+5. Toggle Required: ON
+
+6. BONUS: Click the three dots (⋮) at the bottom of the question
+   Click "Response validation"
+   Set it to: "Text" → "Email" → "Must be email"
+   (This makes sure people enter a real email format)
+
+📌 QUESTION 3: Phone Number
+
+1. Click "+" to add new question
+
+2. Type: Phone Number
+
+3. Set type to: Short answer
+
+4. Toggle Required: ON
+
+📌 QUESTION 4: City / Location
+
+1. Click "+" to add new question
+
+2. Type: City / Location
+
+3. Set type to: Short answer
+
+4. Toggle Required: ON
+
+📌 QUESTION 5: Course Interested In
+
+1. Click "+" to add new question
+
+2. Type: Course Interested In
+
+3. Set type to: Dropdown
+
+4. Now add the options (type each one and press Enter):
+   • GP Rating
+   • Deck Cadet
+   • Engine Cadet
+   • Electro-Technical Officer (ETO)
+   • Other
+
+5. Toggle Required: ON
+
+📌 QUESTION 6: How did you hear about us?
+
+1. Click "+" to add new question
+
+2. Type: How did you hear about us?
+
+3. Set type to: Dropdown
+
+4. Add these options:
+   • Facebook
+   • Instagram
+   • Google Search
+   • YouTube
+   • Friend/Family Referral
+   • Walk-in
+   • Website
+   • Education Fair
+   • Other
+
+5. Toggle Required: ON
+
+📌 QUESTION 7: Preferred Batch Month
+
+1. Click "+" to add new question
+
+2. Type: Preferred Batch Month
+
+3. Set type to: Dropdown
+
+4. Add these options:
+   • January
+   • February
+   • March
+   • April
+   • May
+   • June
+   • July
+   • August
+   • September
+   • October
+   • November
+   • December
+
+5. Toggle Required: ON
+
+📌 QUESTION 8: Current Education Level
+
+1. Click "+" to add new question
+
+2. Type: Current Education Level
+
+3. Set type to: Dropdown
+
+4. Add these options:
+   • 10th Pass
+   • 12th Pass (Science)
+   • 12th Pass (Commerce)
+   • 12th Pass (Arts)
+   • Graduate
+   • Post Graduate
+   • Other
+
+5. Toggle Required: ON
+
+📌 QUESTION 9: Counsellor Assigned
+
+1. Click "+" to add new question
+
+2. Type: Counsellor Assigned
+
+3. Set type to: Dropdown
+
+4. Add your counsellor names:
+   • Counsellor 1
+   • Counsellor 2
+   • Counsellor 3
+   (Replace these with actual names of your team members)
+
+5. Toggle Required: ON
+
+📌 QUESTION 10: Additional Remarks
+
+1. Click "+" to add new question
+
+2. Type: Additional Remarks
+
+3. Set type to: Paragraph (this allows longer answers)
+
+4. Toggle Required: OFF (this one is optional)
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 4.4: Customize Form Appearance
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click the palette/paint icon at the top (🎨 Customize theme)
+
+2. Choose:
+   • Header image: You can add your logo (optional)
+   • Theme color: Pick a dark blue (to match Paramount branding)
+   • Background color: Light gray or white
+
+3. Click the X to close
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 4.5: Get the Form Link
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click the "Send" button (top right, purple button)
+
+2. You'll see three icons: email, link, and embed code
+
+3. Click the LINK icon (looks like a chain 🔗)
+
+4. You'll see a long URL
+
+5. (Optional) Check the box "Shorten URL" to make it shorter
+
+6. Click "Copy"
+
+7. Go to your Notepad file and add:
+
+   Lead Intake Form URL:
+   [Paste the form link here]
+
+
+================================================================================
+🔗 PART 5: LINKING FORMS TO SHEETS
+================================================================================
+
+This is VERY IMPORTANT! We need to tell the form to save responses in our 
+Lead_Register spreadsheet.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 5.1: Connect Form to Sheet
+───────────────────────────────────────────────────────────────────────────────
+
+1. Make sure you're viewing your form (Paramount Merchant Navy - Lead Intake Form)
+
+2. Click the "Responses" tab at the top (next to "Questions")
+
+3. You'll see a green spreadsheet icon (📊)
+   Click on it - it says "Link to Sheets" when you hover
+
+4. A popup will appear with two options:
+   • Create a new spreadsheet
+   • Select existing spreadsheet
+
+5. Choose "Select existing spreadsheet"
+
+6. Another window opens showing your Google Drive
+
+7. Navigate to your Paramount_CRM_Data folder
+
+8. Click on "Lead_Register"
+
+9. Click "Select"
+
+10. A new tab/sheet will be created in Lead_Register called "Form Responses 1"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 5.2: Verify the Connection
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open your Lead_Register spreadsheet
+
+2. Look at the tabs at the bottom
+   You should see: "Form Responses 1"
+
+3. Click on "Form Responses 1"
+
+4. You should see the form questions as column headers
+
+⚠️ IMPORTANT NOTE:
+The column headers from the form might be slightly different from what we 
+created earlier. That's okay! The form creates its own headers based on 
+question titles. We'll use this sheet as our main data source.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 5.3: Test the Form!
+───────────────────────────────────────────────────────────────────────────────
+
+Let's make sure everything works!
+
+1. Open your form link in a new tab (the URL you copied earlier)
+
+2. Fill in some test data:
+   • Candidate Full Name: Test Student
+   • Email Address: test@example.com
+   • Phone Number: 9876543210
+   • City / Location: Mumbai
+   • Course Interested In: GP Rating
+   • How did you hear about us?: Google Search
+   • Preferred Batch Month: January
+   • Current Education Level: 12th Pass (Science)
+   • Counsellor Assigned: Counsellor 1
+   • Additional Remarks: This is a test
+
+3. Click "Submit"
+
+4. You should see "Your response has been recorded"
+
+5. Now go back to your Lead_Register spreadsheet
+
+6. Click on "Form Responses 1" tab
+
+7. You should see your test data in the first row! 🎉
+
+✅ If you see the data, the form is working correctly!
+
+
+================================================================================
+🌐 PART 6: PUBLISHING SHEETS FOR DASHBOARD
+================================================================================
+
+For the dashboard to read data from Google Sheets, we need to "publish" the 
+sheet. This creates a special link that the dashboard can use.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 6.1: Publish the Lead Register
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open your Lead_Register spreadsheet
+
+2. Click "File" in the menu bar (top left)
+
+3. Click "Share" (with an arrow pointing right →)
+
+4. Click "Publish to web"
+
+5. A popup window appears
+
+6. In the first dropdown (Link), you'll see the sheet name
+   Select "Form Responses 1"
+
+7. In the second dropdown (format), select:
+   "Comma-separated values (.csv)"
+
+8. Click the green "Publish" button
+
+9. A confirmation popup appears. Click "OK"
+
+10. You'll now see a URL! This is your Published CSV URL.
+
+11. COPY this URL (select it all, right-click, Copy)
+
+12. Add to your Notepad file:
+
+    Lead_Register Published CSV URL:
+    [Paste the URL here]
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 6.2: Get the Drive Folder ID
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to Google Drive (https://drive.google.com)
+
+2. Find and open your Paramount_CRM_Data folder
+
+3. Look at the URL in your browser's address bar
+   It looks like: https://drive.google.com/drive/folders/1ABC123XYZ
+
+4. The long string after "folders/" is your Folder ID
+
+5. Add to your Notepad file:
+
+    Google Drive Folder ID:
+    [Paste the folder ID here]
+
+
+================================================================================
+☁️ PART 7: GOOGLE CLOUD SETUP (SERVICE ACCOUNT)
+================================================================================
+
+This is the most technical part, but don't worry - just follow each step!
+
+A "Service Account" is like a robot assistant with its own email address 
+that can access your spreadsheets automatically.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.1: Open Google Cloud Console
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open a new browser tab
+
+2. Go to: https://console.cloud.google.com
+
+3. You'll be asked to sign in with your Google account
+   Use the same account that has your spreadsheets
+
+4. You might see a welcome message or terms of service
+   Click "Agree and Continue"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.2: Create a New Project
+───────────────────────────────────────────────────────────────────────────────
+
+1. Look at the top of the page
+   You'll see "Select a project" with a dropdown arrow
+
+2. Click on it
+
+3. A popup appears. Click "NEW PROJECT" (top right of popup)
+
+4. Enter these details:
+   • Project name: Paramount-CRM
+   • Organization: Select "No organization" 
+     (IMPORTANT: If you see organization options, choose "No organization")
+   • Location: Leave as default
+
+5. Click "CREATE"
+
+6. Wait 30-60 seconds for the project to be created
+   You'll see a notification when it's done
+
+7. Click "SELECT PROJECT" in the notification
+   OR click the project dropdown and select "Paramount-CRM"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.3: Enable Google Sheets API
+───────────────────────────────────────────────────────────────────────────────
+
+"APIs" are like special doorways that let programs talk to Google services.
+
+1. In the left menu, click "APIs & Services"
+   (If you don't see a menu, click the ☰ hamburger icon at top left)
+
+2. Click "Library"
+
+3. In the search box, type: Google Sheets API
+
+4. Click on "Google Sheets API" in the results
+
+5. Click the blue "ENABLE" button
+
+6. Wait a few seconds for it to enable
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.4: Enable Google Drive API
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click "Library" again (left menu → APIs & Services → Library)
+
+2. Search for: Google Drive API
+
+3. Click on "Google Drive API"
+
+4. Click "ENABLE"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.5: Create Service Account
+───────────────────────────────────────────────────────────────────────────────
+
+1. In the left menu, click "APIs & Services"
+
+2. Click "Credentials"
+
+3. At the top, click "+ CREATE CREDENTIALS"
+
+4. Select "Service account"
+
+5. Fill in:
+   • Service account name: paramount-crm-sa
+   • Service account ID: (this fills automatically)
+   • Description: Service account for CRM automation
+
+6. Click "CREATE AND CONTINUE"
+
+7. In "Grant this service account access to project":
+   • Click the dropdown "Select a role"
+   • Search for "Editor"
+   • Select "Editor"
+
+8. Click "CONTINUE"
+
+9. Skip the third step (grant users access)
+   Just click "DONE"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.6: Create and Download the Secret Key (JSON)
+───────────────────────────────────────────────────────────────────────────────
+
+This creates a special file that acts like a password for the robot assistant.
+
+1. You should see your service account in the list
+   It has an email like: paramount-crm-sa@paramount-crm.iam.gserviceaccount.com
+
+2. COPY this email address and save it to your Notepad:
+
+    Service Account Email:
+    [Paste the email here]
+
+3. Click on the service account email (it's a clickable link)
+
+4. Click the "KEYS" tab at the top
+
+5. Click "ADD KEY"
+
+6. Click "Create new key"
+
+7. Select "JSON"
+
+8. Click "CREATE"
+
+9. A file will automatically download to your computer!
+   It's called something like "paramount-crm-xxxxx.json"
+
+10. Find this file in your Downloads folder
+    KEEP IT SAFE - don't share it with anyone!
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 7.7: Share Your Folder with the Service Account
+───────────────────────────────────────────────────────────────────────────────
+
+Now we need to give the robot assistant permission to access your files.
+
+1. Go to Google Drive (https://drive.google.com)
+
+2. Find your "Paramount_CRM_Data" folder
+
+3. Right-click on the folder
+
+4. Click "Share"
+
+5. In the "Add people" field, paste the Service Account Email
+   (the one that ends with @....iam.gserviceaccount.com)
+
+6. Change the permission from "Viewer" to "Editor"
+   (Click the dropdown next to the email)
+
+7. UNCHECK "Notify people" (the robot doesn't need emails!)
+
+8. Click "Share"
+
+
+================================================================================
+🐙 PART 8: CREATING GITHUB ACCOUNT
+================================================================================
+
+GitHub is where we'll store our code and run automated tasks.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 8.1: Create GitHub Account
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open a new browser tab
+
+2. Go to: https://github.com/signup
+
+3. Enter your email address and click "Continue"
+
+4. Create a password and click "Continue"
+
+5. Choose a username (this will be public)
+   Example: paramount-navy or your organization name
+
+6. Complete the verification puzzle
+
+7. Click "Create account"
+
+8. Check your email for a verification code
+
+9. Enter the code on GitHub
+
+10. Answer the personalization questions (or click "Skip")
+
+🎉 You now have a GitHub account!
+
+Add to your Notepad:
+
+    GitHub Username:
+    [Your username]
+
+
+================================================================================
+📁 PART 9: CREATING GITHUB REPOSITORY
+================================================================================
+
+A "repository" (or "repo") is like a folder on GitHub that stores your project.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 9.1: Create New Repository
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to: https://github.com
+
+2. Sign in if needed
+
+3. Look for a "+" icon in the top right corner
+   Click it
+
+4. Click "New repository"
+
+5. Fill in:
+   • Repository name: paramount-crm-system
+   • Description: Sales Operations CRM for Paramount Merchant Navy
+   • Select: Private (or Public if you want it visible)
+   • ✅ CHECK "Add a README file"
+
+6. Click the green "Create repository" button
+
+7. You'll be taken to your new repository page
+
+Add to your Notepad:
+
+    GitHub Repository URL:
+    https://github.com/[your-username]/paramount-crm-system
+
+
+================================================================================
+📤 PART 10: UPLOADING FILES TO GITHUB
+================================================================================
+
+Now we'll upload all the CRM system files to your repository.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 10.1: Prepare Your Files
+───────────────────────────────────────────────────────────────────────────────
+
+First, make sure you have all the CRM files downloaded:
+
+📁 Your folder should look like this:
+
+   paramount-crm-system/
+   ├── .github/
+   │   └── workflows/
+   │       ├── morning_briefing.yml
+   │       ├── hourly_aggregation.yml
+   │       └── monthly_archive.yml
+   ├── scripts/
+   │   ├── google_sheets_connector.py
+   │   ├── send_slack_email.py
+   │   └── archive_leads.py
+   ├── dashboard_ui/
+   │   ├── index.html
+   │   ├── style.css
+   │   ├── app.js
+   │   └── config.js
+   ├── apps_script_backup/
+   │   └── Code.gs
+   ├── looker_studio_export/
+   │   ├── paramount_dashboard.json
+   │   └── calculated_fields.md
+   ├── docs/
+   │   └── index.html
+   ├── requirements.txt
+   ├── README.md
+   ├── README_LOOKER.md
+   ├── .gitignore
+   └── LICENSE
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 10.2: Update config.js with Your URLs
+───────────────────────────────────────────────────────────────────────────────
+
+Before uploading, we need to add your specific URLs to the config file.
+
+1. Open dashboard_ui/config.js in a text editor (Notepad, VS Code, etc.)
+
+2. Find these lines and replace with your URLs from your Notepad file:
+
+   leadRegisterCsvUrl: 'YOUR_CSV_URL_HERE_FOR_LEAD_REGISTER',
+   
+   Replace with your Published CSV URL
+
+   quickAddFormUrl: 'YOUR_FORM_URL_HERE_FOR_LEAD_INTAKE',
+   
+   Replace with your Lead Intake Form URL
+
+3. Save the file
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 10.3: Upload Files to GitHub
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to your repository: https://github.com/[username]/paramount-crm-system
+
+2. Click "Add file" (next to the green "Code" button)
+
+3. Click "Upload files"
+
+4. You can either:
+   • Drag and drop files from your computer
+   • Click "choose your files" to browse
+
+5. Upload ALL the folders and files
+
+   ⚠️ IMPORTANT: GitHub might not let you upload empty folders or hidden 
+   folders (starting with .). You may need to upload in parts:
+
+   a. First, upload the main files (README.md, requirements.txt, etc.)
+   b. Then create folders and upload files inside them
+
+6. For each upload:
+   • Add files
+   • At the bottom, write a commit message like: "Add CRM system files"
+   • Click "Commit changes"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 10.4: Create Folders and Upload (Alternative Method)
+───────────────────────────────────────────────────────────────────────────────
+
+If drag-and-drop doesn't work well, use this method:
+
+1. Click "Add file" → "Create new file"
+
+2. In the filename box, type: .github/workflows/morning_briefing.yml
+   (This automatically creates the folders!)
+
+3. Paste the content of the morning_briefing.yml file
+
+4. Click "Commit new file"
+
+5. Repeat for each file
+
+
+================================================================================
+🔐 PART 11: SETTING UP GITHUB SECRETS
+================================================================================
+
+"Secrets" are like password storage for GitHub. This is where we'll store 
+our sensitive information safely.
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 11.1: Access Secrets Settings
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to your repository on GitHub
+
+2. Click "Settings" tab (top of the page, with a gear icon ⚙️)
+
+3. In the left sidebar, scroll down and find "Secrets and variables"
+   Click on it
+
+4. Click "Actions"
+
+5. You should see "Repository secrets" section
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 11.2: Add Secret #1 - GOOGLE_SERVICE_ACCOUNT_JSON
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click "New repository secret"
+
+2. Name: GOOGLE_SERVICE_ACCOUNT_JSON
+
+3. Value: 
+   • Open the JSON file you downloaded earlier (paramount-crm-xxxxx.json)
+   • Select ALL the content (Ctrl+A or Cmd+A)
+   • Copy it (Ctrl+C or Cmd+C)
+   • Paste it in the "Secret" field
+
+4. Click "Add secret"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 11.3: Add Secret #2 - DRIVE_FOLDER_ID
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click "New repository secret"
+
+2. Name: DRIVE_FOLDER_ID
+
+3. Value: Paste your Google Drive Folder ID (from your Notepad)
+
+4. Click "Add secret"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 11.4: Add Secret #3 - GMAIL_USER
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click "New repository secret"
+
+2. Name: GMAIL_USER
+
+3. Value: Your Gmail address (e.g., sales@paramountmerchantnavy.com)
+
+4. Click "Add secret"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 11.5: Add Secret #4 - GMAIL_APP_PASSWORD
+───────────────────────────────────────────────────────────────────────────────
+
+First, we need to create an App Password for Gmail:
+
+🔧 Creating Gmail App Password:
+
+1. Go to: https://myaccount.google.com/security
+
+2. Make sure "2-Step Verification" is ON
+   (If not, you need to enable it first - click on it and follow steps)
+
+3. After 2-Step Verification is enabled, go to:
+   https://myaccount.google.com/apppasswords
+
+4. Under "Select app", choose "Mail"
+
+5. Under "Select device", choose "Other"
+   Type: GitHub Actions
+
+6. Click "Generate"
+
+7. You'll see a 16-character password (like: abcd efgh ijkl mnop)
+   COPY THIS PASSWORD (without spaces)
+
+8. Now go back to GitHub Secrets
+
+9. Click "New repository secret"
+
+10. Name: GMAIL_APP_PASSWORD
+
+11. Value: Paste the 16-character password (no spaces)
+
+12. Click "Add secret"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 11.6: Add Secret #5 - SLACK_WEBHOOK_URL (Optional)
+───────────────────────────────────────────────────────────────────────────────
+
+This is optional. If you use Slack and want notifications there:
+
+🔧 Getting Slack Webhook URL:
+
+1. Go to: https://api.slack.com/apps
+
+2. Click "Create New App"
+
+3. Choose "From scratch"
+
+4. App Name: Paramount CRM
+   Workspace: Select your workspace
+
+5. Click "Create App"
+
+6. In the left menu, click "Incoming Webhooks"
+
+7. Turn ON "Activate Incoming Webhooks"
+
+8. Click "Add New Webhook to Workspace"
+
+9. Select the channel (e.g., #sales-alerts)
+
+10. Click "Allow"
+
+11. Copy the Webhook URL
+
+12. Go back to GitHub Secrets
+
+13. Click "New repository secret"
+
+14. Name: SLACK_WEBHOOK_URL
+
+15. Value: Paste the webhook URL
+
+16. Click "Add secret"
+
+
+================================================================================
+🌐 PART 12: ENABLING GITHUB PAGES (DASHBOARD)
+================================================================================
+
+GitHub Pages will host your dashboard website for FREE!
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 12.1: Enable GitHub Pages
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to your repository on GitHub
+
+2. Click "Settings" tab
+
+3. In the left sidebar, click "Pages"
+
+4. Under "Source", you'll see a dropdown that says "None"
+   Click it and select "main"
+
+5. A second dropdown appears for the folder
+   Select "/ (root)"
+
+6. Click "Save"
+
+7. Wait about 1-2 minutes
+
+8. Refresh the page
+
+9. You should see:
+   "Your site is live at https://[username].github.io/paramount-crm-system/"
+
+10. Click the link to see your dashboard!
+    (Note: It might show errors until config.js has correct URLs)
+
+Add to your Notepad:
+
+    Dashboard URL:
+    https://[username].github.io/paramount-crm-system/dashboard_ui/
+
+
+================================================================================
+📜 PART 13: INSTALLING APPS SCRIPT
+================================================================================
+
+Apps Script is the magic that automatically generates Lead IDs!
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 13.1: Open Apps Script Editor
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open your Lead_Register spreadsheet
+
+2. Click "Extensions" in the menu bar
+
+3. Click "Apps Script"
+
+4. A new tab opens with the Apps Script editor
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 13.2: Delete Existing Code and Paste New Code
+───────────────────────────────────────────────────────────────────────────────
+
+1. You'll see some default code like:
+   function myFunction() {
+   }
+
+2. Select ALL of this code (Ctrl+A or Cmd+A)
+
+3. Delete it
+
+4. Open the file: apps_script_backup/Code.gs
+
+5. Copy ALL the content
+
+6. Paste it into the Apps Script editor
+
+7. Click the disk icon to SAVE (or press Ctrl+S)
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 13.3: Name the Project
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click on "Untitled project" at the top
+
+2. Type: Lead ID Generator
+
+3. Press Enter
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 13.4: Run the Script to Authorize
+───────────────────────────────────────────────────────────────────────────────
+
+1. Click the dropdown next to "Debug" that shows function names
+   Select "onFormSubmit"
+
+2. Click the "Run" button (▶️)
+
+3. A popup appears asking for permissions
+   Click "Review permissions"
+
+4. Select your Google account
+
+5. You might see "Google hasn't verified this app"
+   Click "Advanced"
+
+6. Click "Go to Lead ID Generator (unsafe)"
+   (Don't worry, it's your own script!)
+
+7. Click "Allow"
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 13.5: Set Up the Trigger
+───────────────────────────────────────────────────────────────────────────────
+
+A "trigger" tells the script WHEN to run.
+
+1. In the left sidebar, click the clock icon (⏰ Triggers)
+
+2. Click "+ Add Trigger" (bottom right)
+
+3. Configure these settings:
+
+   • Choose which function to run: onFormSubmit
+   • Choose which deployment: Head
+   • Select event source: From spreadsheet
+   • Select event type: On form submit
+
+4. Click "Save"
+
+5. You might need to authorize again - follow the same steps
+
+
+================================================================================
+✅ PART 14: TESTING EVERYTHING
+================================================================================
+
+Let's make sure everything works!
+
+───────────────────────────────────────────────────────────────────────────────
+TEST 1: Test Form → Lead ID Generation
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open your Lead Intake Form link
+
+2. Fill in test data and submit
+
+3. Open your Lead_Register spreadsheet
+
+4. Check "Form Responses 1" tab
+
+5. You should see:
+   • Your new entry in a row
+   • Column A should have a Lead ID like: PMN-2026-0001
+   • Column L (Status) should say: New Lead
+
+✅ If you see the Lead ID, the Apps Script is working!
+
+───────────────────────────────────────────────────────────────────────────────
+TEST 2: Test Dashboard
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open your Dashboard URL:
+   https://[username].github.io/paramount-crm-system/dashboard_ui/
+
+2. You should see:
+   • KPI cards (Total Leads, Enrolled, etc.)
+   • The test lead you created
+   • Status breakdown
+
+3. Click "All Leads" tab
+
+4. Find your test lead and click "Edit"
+
+5. The edit popup should show the lead details
+
+✅ If you can see and edit leads, the dashboard is working!
+
+───────────────────────────────────────────────────────────────────────────────
+TEST 3: Test GitHub Actions (Manual Run)
+───────────────────────────────────────────────────────────────────────────────
+
+1. Go to your GitHub repository
+
+2. Click the "Actions" tab
+
+3. You should see 3 workflows:
+   • 📬 Morning Briefing
+   • 📊 Hourly KPI Aggregation
+   • 🗄️ Monthly Lead Archive
+
+4. Click on "📬 Morning Briefing"
+
+5. Click "Run workflow" (right side)
+
+6. Click the green "Run workflow" button
+
+7. Wait for it to complete (refresh if needed)
+
+8. If it shows a green checkmark ✅, it worked!
+   If it shows a red X ❌, click on it to see the error
+
+✅ If all tests pass, your system is ready!
+
+
+================================================================================
+📱 PART 15: DAILY USAGE GUIDE
+================================================================================
+
+Here's how to use your new CRM system every day:
+
+───────────────────────────────────────────────────────────────────────────────
+👋 MORNING ROUTINE
+───────────────────────────────────────────────────────────────────────────────
+
+1. Check your email or Slack for the Morning Briefing
+   (Arrives at 8:30 AM automatically)
+
+2. Review which leads need follow-up
+
+3. Open the Dashboard and check the KPIs
+
+───────────────────────────────────────────────────────────────────────────────
+📞 WHEN YOU CALL A LEAD
+───────────────────────────────────────────────────────────────────────────────
+
+1. Open Dashboard → All Leads
+
+2. Find the lead you called
+
+3. Click "Edit"
+
+4. Update the status:
+   • Called but no answer? → Keep as "New Lead" or "Contacted"
+   • They're interested? → Change to "Interested"
+   • Scheduled a counselling? → "Counselling Scheduled"
+   • Ready to join? → "Admission Pending"
+   • They joined! → "Enrolled"
+   • Not interested → "Lost"
+
+5. Add notes about the call
+
+6. Click "Save Changes"
+
+───────────────────────────────────────────────────────────────────────────────
+📝 WHEN A NEW LEAD COMES IN
+───────────────────────────────────────────────────────────────────────────────
+
+1. Lead fills the online form
+
+2. Automatically gets Lead ID and appears in spreadsheet
+
+3. Automatically appears in Dashboard
+
+4. Morning briefing will include it
+
+5. Just start following up!
+
+───────────────────────────────────────────────────────────────────────────────
+🔍 FINDING A SPECIFIC LEAD
+───────────────────────────────────────────────────────────────────────────────
+
+1. Dashboard → All Leads
+
+2. Use the search box:
+   • Search by name
+   • Search by phone number
+   • Search by Lead ID
+
+3. Use the Status filter to narrow down
+
+
+================================================================================
+❓ TROUBLESHOOTING
+================================================================================
+
+Problem: Dashboard shows "--" instead of numbers
+Solution: Your CSV URL might be wrong or expired. Re-publish the sheet:
+         File → Share → Publish to web → Republish
+
+Problem: Lead ID not generating
+Solution: Check Apps Script trigger:
+         Open Sheet → Extensions → Apps Script → Triggers → Make sure one exists
+
+Problem: Morning briefing not received
+Solution: Check GitHub Actions:
+         Go to GitHub → Actions → Check if workflows are running
+         Check Secrets → Make sure all 5 secrets are added
+
+Problem: "Permission Denied" errors
+Solution: Make sure you shared the Drive folder with the service account email
+
+Problem: Form responses not appearing in sheet
+Solution: Check form linking:
+         Open Form → Responses → Click spreadsheet icon → Re-link to sheet
+
+Problem: Dashboard not loading at all
+Solution: 
+         1. Check GitHub Pages is enabled (Settings → Pages)
+         2. Check config.js has correct URLs
+         3. Clear browser cache (Ctrl+F5)
+
+
+================================================================================
+🎉 CONGRATULATIONS!
+================================================================================
+
+You did it! 🚀
+
+Your Paramount Merchant Navy CRM System is now fully operational!
+
+What's working now:
+✅ Lead capture through Google Forms
+✅ Automatic Lead ID generation
+✅ Real-time dashboard with KPIs
+✅ Lead status management
+✅ Morning briefings (8:30 AM daily)
+✅ Hourly KPI updates
+✅ Monthly auto-archiving
+
+Next step (optional):
+📊 Set up Looker Studio for advanced analytics
+   See: README_LOOKER.md for instructions
+
+
+================================================================================
+📋 QUICK REFERENCE CARD
+================================================================================
+
+🌐 YOUR URLS:
+
+Dashboard:        https://[username].github.io/paramount-crm-system/dashboard_ui/
+Lead Form:        [Your Google Form URL]
+Lead Register:    [Your Google Sheet URL]
+GitHub Repo:      https://github.com/[username]/paramount-crm-system
+
+📊 STATUS WORKFLOW:
+
+New Lead → Contacted → Interested → Counselling Scheduled → Admission Pending
+                                                      ↓
+                                    ┌─────────────────┼─────────────────┐
+                                    ↓                 ↓                 ↓
+                               Enrolled          Completed            Lost
+                                    └─────────────────┴─────────────────┘
+                                                      ↓
+                                                 ARCHIVED
+
+⏰ AUTOMATIC SCHEDULES:
+
+Morning Briefing:    8:30 AM IST daily
+KPI Update:          Every hour
+Monthly Archive:     1st of each month
+
+================================================================================
+                    Made with ❤️ for Paramount Merchant Navy
+================================================================================
