@@ -3,416 +3,841 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Paramount Merchant Navy - Sales Operations Dashboard">
-    <meta name="theme-color" content="#1a237e">
-    
     <title>Paramount Merchant Navy | Sales Dashboard</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
-    
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ============================================ */
+        /* EMBEDDED CSS - Ensures styles always load */
+        /* ============================================ */
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a237e 0%, #0d1642 100%);
+            color: white;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon { font-size: 2.5rem; }
+        .logo h1 { font-size: 1.4rem; margin: 0; }
+        .logo .tagline { font-size: 0.75rem; opacity: 0.8; }
+        
+        .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .btn-primary {
+            background: #ffd700;
+            color: #1a237e;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary:hover {
+            background: #ffeb3b;
+        }
+        
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Error Banner */
+        .error-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .error-banner.error { background: #f8d7da; border-color: #dc3545; }
+        .error-banner.success { background: #d4edda; border-color: #28a745; }
+        
+        /* KPI Grid */
+        .section-title {
+            font-size: 1.2rem;
+            color: #1a237e;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-left: 4px solid #1a237e;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+        }
+        
+        .kpi-card.success { border-left-color: #28a745; }
+        .kpi-card.warning { border-left-color: #fd7e14; }
+        .kpi-card.danger { border-left-color: #dc3545; }
+        .kpi-card.info { border-left-color: #17a2b8; }
+        .kpi-card.gold { border-left-color: #ffd700; }
+        
+        .kpi-icon { font-size: 2rem; }
+        .kpi-value { font-size: 2rem; font-weight: 700; color: #1a237e; }
+        .kpi-label { font-size: 0.85rem; color: #666; margin-top: 4px; }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .card-title {
+            font-size: 1rem;
+            color: #1a237e;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Status Funnel */
+        .funnel-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #1a237e;
+        }
+        
+        .funnel-item.new { border-left-color: #17a2b8; }
+        .funnel-item.contacted { border-left-color: #9c27b0; }
+        .funnel-item.interested { border-left-color: #fd7e14; }
+        .funnel-item.scheduled { border-left-color: #2196f3; }
+        .funnel-item.pending { border-left-color: #ff9800; }
+        .funnel-item.enrolled { border-left-color: #28a745; }
+        .funnel-item.completed { border-left-color: #388e3c; }
+        .funnel-item.lost { border-left-color: #dc3545; }
+        
+        .funnel-label { flex: 1; font-weight: 500; }
+        .funnel-count {
+            background: #e0e0e0;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        
+        .funnel-bar {
+            width: 100px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .funnel-bar-fill {
+            height: 100%;
+            background: #1a237e;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+        
+        /* Follow-up List */
+        .followup-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #1a237e;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+        
+        .followup-item:hover {
+            background: #e8e8e8;
+            transform: translateX(5px);
+        }
+        
+        .followup-name { font-weight: 600; color: #333; }
+        .followup-meta { font-size: 0.85rem; color: #666; display: flex; gap: 15px; flex-wrap: wrap; }
+        .followup-status {
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            background: #e0e0e0;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        
+        /* Source Breakdown */
+        .source-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .source-name { color: #555; }
+        .source-count { font-weight: 700; color: #1a237e; }
+        
+        /* Footer */
+        .footer {
+            background: #0d1642;
+            color: white;
+            padding: 15px 20px;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #1a237e;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #888;
+        }
+        
+        .empty-state .icon { font-size: 3rem; margin-bottom: 15px; }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header-container { flex-direction: column; text-align: center; }
+            .nav { justify-content: center; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .footer-content { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
-    <!-- ============================================ -->
-    <!-- HEADER / NAVIGATION -->
-    <!-- ============================================ -->
+
+    <!-- HEADER -->
     <header class="header">
         <div class="header-container">
             <div class="logo">
                 <span class="logo-icon">⚓</span>
-                <div class="logo-text">
+                <div>
                     <h1>Paramount Merchant Navy</h1>
-                    <span class="tagline">Sales Operations Dashboard</span>
+                    <div class="tagline">Sales Operations Dashboard</div>
                 </div>
             </div>
             <nav class="nav">
-                <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
-                <button class="nav-btn" data-view="leads">📋 All Leads</button>
-                <button class="nav-btn" data-view="followups">📞 Follow-ups</button>
-                <button id="quickAddBtn" class="btn btn-primary">
-                    <span class="btn-icon">+</span>
-                    New Lead
-                </button>
+                <button class="nav-btn active" onclick="showView('dashboard')">📊 Dashboard</button>
+                <button class="nav-btn" onclick="showView('leads')">📋 All Leads</button>
+                <button class="btn-primary" onclick="openLeadForm()">+ New Lead</button>
             </nav>
-            <button class="mobile-menu-btn" id="mobileMenuBtn">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
         </div>
     </header>
 
-    <!-- Mobile Navigation -->
-    <div class="mobile-nav" id="mobileNav">
-        <button class="mobile-nav-btn active" data-view="dashboard">📊 Dashboard</button>
-        <button class="mobile-nav-btn" data-view="leads">📋 All Leads</button>
-        <button class="mobile-nav-btn" data-view="followups">📞 Follow-ups</button>
-        <button id="quickAddBtnMobile" class="btn btn-primary btn-block">
-            <span class="btn-icon">+</span>
-            New Lead
-        </button>
-    </div>
-
-    <!-- ============================================ -->
     <!-- MAIN CONTENT -->
-    <!-- ============================================ -->
     <main class="main-content">
+        
+        <!-- Status Banner -->
+        <div id="statusBanner" class="error-banner" style="display: none;">
+            <span id="statusIcon">⚠️</span>
+            <span id="statusMessage">Loading...</span>
+            <button onclick="loadData()" style="margin-left: auto; padding: 5px 15px; cursor: pointer;">🔄 Retry</button>
+        </div>
+
         <!-- Loading State -->
-        <div class="loading-overlay" id="loadingOverlay">
-            <div class="loading-spinner"></div>
-            <p class="loading-text">Loading dashboard data...</p>
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>Loading dashboard data...</p>
         </div>
 
-        <!-- Error State -->
-        <div class="error-banner" id="errorBanner" style="display: none;">
-            <span class="error-icon">⚠️</span>
-            <span class="error-message" id="errorMessage">Unable to fetch data. Please check your connection.</span>
-            <button class="btn btn-sm" id="retryBtn">Retry</button>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- DASHBOARD VIEW -->
-        <!-- ============================================ -->
-        <div id="dashboardView" class="view-container">
-            <div class="dashboard-grid">
-                <!-- LEFT COLUMN - KPI CARDS -->
-                <section class="kpi-section">
-                    <h2 class="section-title">
-                        <span class="section-icon">📊</span>
-                        Key Performance Indicators
-                    </h2>
-                    
-                    <div class="kpi-grid">
-                        <!-- Today's New Leads -->
-                        <div class="kpi-card kpi-primary">
-                            <div class="kpi-icon">📥</div>
-                            <div class="kpi-content">
-                                <span class="kpi-value" id="todaysLeads">--</span>
-                                <span class="kpi-label">Today's New Leads</span>
-                            </div>
-                        </div>
-
-                        <!-- Total Leads -->
-                        <div class="kpi-card">
-                            <div class="kpi-icon">📋</div>
-                            <div class="kpi-content">
-                                <span class="kpi-value" id="totalLeads">--</span>
-                                <span class="kpi-label">Total Leads</span>
-                            </div>
-                        </div>
-
-                        <!-- Enrolled Count -->
-                        <div class="kpi-card kpi-success">
-                            <div class="kpi-icon">🎓</div>
-                            <div class="kpi-content">
-                                <span class="kpi-value" id="enrolledCount">--</span>
-                                <span class="kpi-label">Enrolled</span>
-                            </div>
-                        </div>
-
-                        <!-- Conversion Rate -->
-                        <div class="kpi-card kpi-highlight">
-                            <div class="kpi-icon">📈</div>
-                            <div class="kpi-content">
-                                <span class="kpi-value" id="conversionRate">--%</span>
-                                <span class="kpi-label">Conversion Rate</span>
-                            </div>
-                            <div class="kpi-progress">
-                                <div class="progress-bar" id="conversionProgress" style="width: 0%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Pending Follow-ups -->
-                        <div class="kpi-card kpi-warning">
-                            <div class="kpi-icon">📞</div>
-                            <div class="kpi-content">
-                                <span class="kpi-value" id="pendingFollowups">--</span>
-                                <span class="kpi-label">Pending Follow-ups</span>
-                            </div>
-                        </div>
-
-                        <!-- Lost Leads -->
-                        <div class="kpi-card kpi-danger">
-                            <div class="kpi-icon">❌</div>
-                            <div class="kpi-content">
-                                <span class="kpi-value" id="lostCount">--</span>
-                                <span class="kpi-label">Lost</span>
-                            </div>
-                        </div>
+        <!-- Dashboard View -->
+        <div id="dashboardView" style="display: none;">
+            
+            <!-- KPI Cards -->
+            <h2 class="section-title">📊 Key Performance Indicators</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card info">
+                    <span class="kpi-icon">📥</span>
+                    <div>
+                        <div class="kpi-value" id="kpiTotal">0</div>
+                        <div class="kpi-label">Total Leads</div>
                     </div>
-
-                    <!-- Status Funnel -->
-                    <div class="funnel-card">
-                        <h3 class="card-title">
-                            <span class="card-icon">🔄</span>
-                            Lead Status Funnel
-                        </h3>
-                        <div class="status-funnel" id="statusFunnel">
-                            <!-- Funnel items will be dynamically inserted -->
-                        </div>
+                </div>
+                <div class="kpi-card success">
+                    <span class="kpi-icon">🎓</span>
+                    <div>
+                        <div class="kpi-value" id="kpiEnrolled">0</div>
+                        <div class="kpi-label">Enrolled</div>
                     </div>
-
-                    <!-- Lead Source Breakdown -->
-                    <div class="breakdown-card">
-                        <h3 class="card-title">
-                            <span class="card-icon">📊</span>
-                            Lead Source Breakdown
-                        </h3>
-                        <div class="source-breakdown" id="sourceBreakdown">
-                            <div class="source-item">
-                                <span class="source-name">Loading...</span>
-                                <span class="source-count">--</span>
-                            </div>
-                        </div>
+                </div>
+                <div class="kpi-card gold">
+                    <span class="kpi-icon">📈</span>
+                    <div>
+                        <div class="kpi-value" id="kpiConversion">0%</div>
+                        <div class="kpi-label">Conversion Rate</div>
                     </div>
-                </section>
-
-                <!-- RIGHT COLUMN - PRIORITY FOLLOW-UPS -->
-                <section class="followup-section">
-                    <h2 class="section-title">
-                        <span class="section-icon">📞</span>
-                        Priority Follow-ups
-                        <span class="badge badge-warning" id="followupBadge">0</span>
-                    </h2>
-
-                    <!-- Filter Tabs -->
-                    <div class="filter-tabs">
-                        <button class="filter-tab active" data-filter="all">All</button>
-                        <button class="filter-tab" data-filter="new">New Lead</button>
-                        <button class="filter-tab" data-filter="contacted">Contacted</button>
-                        <button class="filter-tab" data-filter="interested">Interested</button>
-                        <button class="filter-tab" data-filter="scheduled">Scheduled</button>
+                </div>
+                <div class="kpi-card warning">
+                    <span class="kpi-icon">📞</span>
+                    <div>
+                        <div class="kpi-value" id="kpiPending">0</div>
+                        <div class="kpi-label">Pending Follow-ups</div>
                     </div>
-
-                    <!-- Follow-up List -->
-                    <div class="followup-list" id="followupList">
-                        <div class="followup-empty">
-                            <span class="empty-icon">📭</span>
-                            <p>Loading follow-ups...</p>
-                        </div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-icon">🆕</span>
+                    <div>
+                        <div class="kpi-value" id="kpiNew">0</div>
+                        <div class="kpi-label">New Leads</div>
                     </div>
-                </section>
-            </div>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- ALL LEADS VIEW -->
-        <!-- ============================================ -->
-        <div id="leadsView" class="view-container" style="display: none;">
-            <div class="leads-header">
-                <h2 class="section-title">
-                    <span class="section-icon">📋</span>
-                    All Leads
-                    <span class="badge" id="leadsBadge">0</span>
-                </h2>
-                <div class="leads-search">
-                    <input type="text" id="leadSearch" placeholder="Search by name, phone, or Lead ID..." class="search-input">
-                    <select id="statusFilter" class="filter-select">
-                        <option value="">All Statuses</option>
-                        <option value="New Lead">New Lead</option>
-                        <option value="Contacted">Contacted</option>
-                        <option value="Interested">Interested</option>
-                        <option value="Counselling Scheduled">Counselling Scheduled</option>
-                        <option value="Admission Pending">Admission Pending</option>
-                        <option value="Enrolled">Enrolled</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Lost">Lost</option>
-                    </select>
+                </div>
+                <div class="kpi-card danger">
+                    <span class="kpi-icon">❌</span>
+                    <div>
+                        <div class="kpi-value" id="kpiLost">0</div>
+                        <div class="kpi-label">Lost</div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="leads-table-container">
-                <table class="leads-table" id="leadsTable">
-                    <thead>
-                        <tr>
-                            <th>Lead ID</th>
-                            <th>Candidate Name</th>
-                            <th>Phone</th>
-                            <th>Course</th>
-                            <th>Counsellor</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leadsTableBody">
-                        <!-- Table rows will be dynamically inserted -->
-                    </tbody>
-                </table>
+
+            <!-- Two Column Grid -->
+            <div class="dashboard-grid">
+                
+                <!-- Left: Status Funnel -->
+                <div class="card">
+                    <h3 class="card-title">🔄 Lead Status Funnel</h3>
+                    <div id="statusFunnel">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Right: Follow-ups -->
+                <div class="card">
+                    <h3 class="card-title">📞 Priority Follow-ups</h3>
+                    <div id="followupList">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Source Breakdown -->
+            <div class="card" style="margin-top: 25px;">
+                <h3 class="card-title">📊 Lead Source Breakdown</h3>
+                <div id="sourceBreakdown" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Leads Table View -->
+        <div id="leadsView" style="display: none;">
+            <h2 class="section-title">📋 All Leads</h2>
+            <div class="card">
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="searchInput" placeholder="🔍 Search by name, phone, or Lead ID..." 
+                           style="width: 100%; max-width: 400px; padding: 10px 15px; border: 2px solid #ddd; border-radius: 6px; font-size: 1rem;"
+                           oninput="filterLeads()">
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #1a237e; color: white;">
+                                <th style="padding: 12px; text-align: left;">Lead ID</th>
+                                <th style="padding: 12px; text-align: left;">Name</th>
+                                <th style="padding: 12px; text-align: left;">Phone</th>
+                                <th style="padding: 12px; text-align: left;">Course</th>
+                                <th style="padding: 12px; text-align: left;">Counsellor</th>
+                                <th style="padding: 12px; text-align: left;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadsTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- ============================================ -->
-        <!-- FOLLOW-UPS VIEW -->
-        <!-- ============================================ -->
-        <div id="followupsView" class="view-container" style="display: none;">
-            <div class="followups-header">
-                <h2 class="section-title">
-                    <span class="section-icon">📞</span>
-                    Follow-up Tracker
-                </h2>
-            </div>
-            
-            <div class="followups-grid" id="followupsGrid">
-                <!-- Followup cards will be dynamically inserted -->
-            </div>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- QUICK STATS BAR -->
-        <!-- ============================================ -->
-        <section class="quick-stats-bar">
-            <div class="quick-stat">
-                <span class="quick-stat-label">New Leads</span>
-                <span class="quick-stat-value" id="newLeadCount">--</span>
-            </div>
-            <div class="quick-stat">
-                <span class="quick-stat-label">Contacted</span>
-                <span class="quick-stat-value" id="contactedCount">--</span>
-            </div>
-            <div class="quick-stat">
-                <span class="quick-stat-label">Interested</span>
-                <span class="quick-stat-value" id="interestedCount">--</span>
-            </div>
-            <div class="quick-stat">
-                <span class="quick-stat-label">Scheduled</span>
-                <span class="quick-stat-value" id="scheduledCount">--</span>
-            </div>
-            <div class="quick-stat">
-                <span class="quick-stat-label">Pending</span>
-                <span class="quick-stat-value" id="pendingCount">--</span>
-            </div>
-        </section>
     </main>
 
-    <!-- ============================================ -->
-    <!-- EDIT LEAD MODAL -->
-    <!-- ============================================ -->
-    <div class="modal-overlay" id="editModal" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">
-                    <span id="editLeadId">PMN-2026-0001</span>
-                    <span class="status-badge" id="currentStatusBadge">New Lead</span>
-                </h3>
-                <button class="modal-close" id="closeModal">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <!-- Lead Info -->
-                <div class="lead-info-card">
-                    <div class="lead-info-row">
-                        <span class="lead-info-label">👤 Candidate:</span>
-                        <span class="lead-info-value" id="editCandidateName">--</span>
-                    </div>
-                    <div class="lead-info-row">
-                        <span class="lead-info-label">📞 Phone:</span>
-                        <span class="lead-info-value" id="editPhone">--</span>
-                    </div>
-                    <div class="lead-info-row">
-                        <span class="lead-info-label">📧 Email:</span>
-                        <span class="lead-info-value" id="editEmail">--</span>
-                    </div>
-                    <div class="lead-info-row">
-                        <span class="lead-info-label">📚 Course:</span>
-                        <span class="lead-info-value" id="editCourse">--</span>
-                    </div>
-                    <div class="lead-info-row">
-                        <span class="lead-info-label">🏙️ City:</span>
-                        <span class="lead-info-value" id="editCity">--</span>
-                    </div>
-                    <div class="lead-info-row">
-                        <span class="lead-info-label">👨‍💼 Counsellor:</span>
-                        <span class="lead-info-value" id="editCounsellor">--</span>
-                    </div>
-                </div>
-
-                <!-- Status Update -->
-                <div class="status-update-section">
-                    <h4>Update Status</h4>
-                    <div class="status-workflow">
-                        <button class="status-btn" data-status="New Lead">New Lead</button>
-                        <span class="status-arrow">→</span>
-                        <button class="status-btn" data-status="Contacted">Contacted</button>
-                        <span class="status-arrow">→</span>
-                        <button class="status-btn" data-status="Interested">Interested</button>
-                        <span class="status-arrow">→</span>
-                        <button class="status-btn" data-status="Counselling Scheduled">Counselling Scheduled</button>
-                        <span class="status-arrow">→</span>
-                        <button class="status-btn" data-status="Admission Pending">Admission Pending</button>
-                    </div>
-                    <div class="status-final">
-                        <button class="status-btn status-success" data-status="Enrolled">✓ Enrolled</button>
-                        <button class="status-btn status-success" data-status="Completed">✓ Completed</button>
-                        <button class="status-btn status-danger" data-status="Lost">✗ Lost</button>
-                    </div>
-                </div>
-
-                <!-- Notes -->
-                <div class="notes-section">
-                    <label for="updateNotes">Add Notes (optional):</label>
-                    <textarea id="updateNotes" rows="3" placeholder="Enter follow-up notes..."></textarea>
-                </div>
-
-                <!-- Previous Remarks -->
-                <div class="remarks-section">
-                    <h4>Previous Remarks</h4>
-                    <div class="remarks-content" id="previousRemarks">
-                        No previous remarks
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button class="btn btn-outline" id="cancelEdit">Cancel</button>
-                <button class="btn btn-primary" id="saveStatus" disabled>
-                    <span class="btn-icon">💾</span>
-                    Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================ -->
     <!-- FOOTER -->
-    <!-- ============================================ -->
     <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-left">
-                <p class="copyright">© 2026 Paramount Merchant Navy</p>
-            </div>
-            <div class="footer-center">
-                <p class="last-updated">
-                    <span class="update-icon">🔄</span>
-                    Last updated: <span id="lastUpdated">--</span>
-                </p>
-            </div>
-            <div class="footer-right">
-                <p class="auto-refresh">
-                    Auto-refresh: <span id="refreshStatus">Active</span>
-                    <span class="refresh-indicator"></span>
-                </p>
-            </div>
+        <div class="footer-content">
+            <div>© 2026 Paramount Merchant Navy</div>
+            <div>🔄 Last updated: <span id="lastUpdated">--</span></div>
+            <div>Auto-refresh: <span id="refreshStatus">Active</span> 🟢</div>
         </div>
     </footer>
 
-    <!-- ============================================ -->
-    <!-- SCRIPTS -->
-    <!-- ============================================ -->
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-    
-    <!-- Fallback if scripts fail to load -->
-    <noscript>
-        <div style="padding: 20px; text-align: center; background: #fff3cd; color: #856404;">
-            ⚠️ JavaScript is required for this dashboard to work. Please enable JavaScript in your browser.
-        </div>
-    </noscript>
+    <!-- CONFIGURATION -->
+    <script>
+        // ============================================
+        // CONFIGURATION - UPDATE THESE URLs!
+        // ============================================
+        const CONFIG = {
+            // YOUR PUBLISHED CSV URL - Get from: File → Share → Publish to web → CSV
+            csvUrl: 'YOUR_CSV_URL_HERE',
+            
+            // YOUR GOOGLE FORM URL - Get from: Form → Send → Link icon
+            formUrl: 'YOUR_FORM_URL_HERE',
+            
+            // Refresh interval (5 minutes = 300000 ms)
+            refreshInterval: 300000
+        };
+    </script>
+
+    <!-- MAIN APPLICATION SCRIPT -->
+    <script>
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let allLeads = [];
+        let isLoading = true;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Dashboard starting...');
+            loadData();
+        });
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadData() {
+            console.log('📡 Loading data...');
+            showLoading(true);
+            hideStatus();
+
+            // Check if URL is configured
+            if (!CONFIG.csvUrl || CONFIG.csvUrl === 'YOUR_CSV_URL_HERE' || CONFIG.csvUrl.includes('YOUR_')) {
+                console.warn('⚠️ CSV URL not configured');
+                showStatus('warning', '⚠️ CSV URL not configured. Please update the CONFIG.csvUrl in this file with your published Google Sheet CSV URL. Using demo data for preview.');
+                allLeads = getDemoData();
+                renderDashboard();
+                showLoading(false);
+                return;
+            }
+
+            try {
+                console.log('📡 Fetching from:', CONFIG.csvUrl.substring(0, 60) + '...');
+                
+                const response = await fetch(CONFIG.csvUrl);
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                
+                const csvText = await response.text();
+                console.log('📄 Received CSV data, length:', csvText.length);
+                
+                allLeads = parseCSV(csvText);
+                console.log('✅ Parsed', allLeads.length, 'leads');
+                
+                if (allLeads.length === 0) {
+                    showStatus('warning', '📭 No leads found in the spreadsheet yet. Submit your first lead through the form!');
+                } else {
+                    showStatus('success', '✅ Data loaded successfully! Found ' + allLeads.length + ' leads.');
+                    // Auto-hide success message after 3 seconds
+                    setTimeout(hideStatus, 3000);
+                }
+                
+                renderDashboard();
+                
+            } catch (error) {
+                console.error('❌ Error loading data:', error);
+                showStatus('error', '❌ Failed to load data: ' + error.message + '. Check that your Google Sheet is published correctly.');
+                allLeads = getDemoData();
+                renderDashboard();
+            }
+            
+            showLoading(false);
+            updateTimestamp();
+            
+            // Schedule next refresh
+            setTimeout(loadData, CONFIG.refreshInterval);
+        }
+
+        // ============================================
+        // CSV PARSING
+        // ============================================
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            if (lines.length < 2) return [];
+            
+            const headers = parseCSVLine(lines[0]);
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                const row = {};
+                headers.forEach((h, idx) => {
+                    row[h.trim()] = (values[idx] || '').trim();
+                });
+                data.push(row);
+            }
+            
+            return data;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            
+            return result.map(s => s.replace(/^"|"$/g, '').trim());
+        }
+
+        // ============================================
+        // DEMO DATA
+        // ============================================
+        function getDemoData() {
+            return [
+                { 'Lead_ID': 'PMN-2026-0001', 'Candidate Full Name': 'Demo Student 1', 'Phone Number': '9876543210', 'Course Interested In': 'GP Rating', 'Counsellor Assigned': 'Counsellor 1', 'Status': 'New Lead', 'How did you hear about us?': 'Website' },
+                { 'Lead_ID': 'PMN-2026-0002', 'Candidate Full Name': 'Demo Student 2', 'Phone Number': '9876543211', 'Course Interested In': 'Deck Cadet', 'Counsellor Assigned': 'Counsellor 2', 'Status': 'Contacted', 'How did you hear about us?': 'Facebook' },
+                { 'Lead_ID': 'PMN-2026-0003', 'Candidate Full Name': 'Demo Student 3', 'Phone Number': '9876543212', 'Course Interested In': 'Engine Cadet', 'Counsellor Assigned': 'Counsellor 1', 'Status': 'Interested', 'How did you hear about us?': 'Referral' },
+                { 'Lead_ID': 'PMN-2026-0004', 'Candidate Full Name': 'Demo Student 4', 'Phone Number': '9876543213', 'Course Interested In': 'GP Rating', 'Counsellor Assigned': 'Counsellor 3', 'Status': 'Enrolled', 'How did you hear about us?': 'Google' },
+                { 'Lead_ID': 'PMN-2026-0005', 'Candidate Full Name': 'Demo Student 5', 'Phone Number': '9876543214', 'Course Interested In': 'ETO', 'Counsellor Assigned': 'Counsellor 2', 'Status': 'Lost', 'How did you hear about us?': 'Instagram' }
+            ];
+        }
+
+        // ============================================
+        // RENDER DASHBOARD
+        // ============================================
+        function renderDashboard() {
+            console.log('🎨 Rendering dashboard...');
+            
+            // Calculate stats
+            const stats = {
+                total: allLeads.length,
+                new: 0, contacted: 0, interested: 0, scheduled: 0, pending: 0, enrolled: 0, completed: 0, lost: 0,
+                sources: {}
+            };
+
+            allLeads.forEach(lead => {
+                const status = (lead['Status'] || 'New Lead').toLowerCase();
+                
+                if (status.includes('new')) stats.new++;
+                else if (status.includes('contacted')) stats.contacted++;
+                else if (status.includes('interested')) stats.interested++;
+                else if (status.includes('scheduled') || status.includes('counselling')) stats.scheduled++;
+                else if (status.includes('pending') || status.includes('admission')) stats.pending++;
+                else if (status.includes('enrolled')) stats.enrolled++;
+                else if (status.includes('completed')) stats.completed++;
+                else if (status.includes('lost')) stats.lost++;
+                else stats.new++; // Default
+                
+                const source = lead['How did you hear about us?'] || lead['Source'] || 'Unknown';
+                stats.sources[source] = (stats.sources[source] || 0) + 1;
+            });
+
+            stats.pendingTotal = stats.new + stats.contacted + stats.interested + stats.scheduled + stats.pending;
+            stats.successTotal = stats.enrolled + stats.completed;
+            stats.conversion = stats.total > 0 ? ((stats.successTotal / stats.total) * 100).toFixed(1) : 0;
+
+            // Update KPIs
+            document.getElementById('kpiTotal').textContent = stats.total;
+            document.getElementById('kpiEnrolled').textContent = stats.successTotal;
+            document.getElementById('kpiConversion').textContent = stats.conversion + '%';
+            document.getElementById('kpiPending').textContent = stats.pendingTotal;
+            document.getElementById('kpiNew').textContent = stats.new;
+            document.getElementById('kpiLost').textContent = stats.lost;
+
+            // Render Status Funnel
+            const funnelData = [
+                { name: 'New Lead', count: stats.new, class: 'new' },
+                { name: 'Contacted', count: stats.contacted, class: 'contacted' },
+                { name: 'Interested', count: stats.interested, class: 'interested' },
+                { name: 'Counselling Scheduled', count: stats.scheduled, class: 'scheduled' },
+                { name: 'Admission Pending', count: stats.pending, class: 'pending' },
+                { name: 'Enrolled', count: stats.enrolled, class: 'enrolled' },
+                { name: 'Completed', count: stats.completed, class: 'completed' },
+                { name: 'Lost', count: stats.lost, class: 'lost' }
+            ];
+
+            const maxCount = Math.max(...funnelData.map(f => f.count), 1);
+            
+            document.getElementById('statusFunnel').innerHTML = funnelData.map(f => `
+                <div class="funnel-item ${f.class}">
+                    <span class="funnel-label">${f.name}</span>
+                    <span class="funnel-count">${f.count}</span>
+                    <div class="funnel-bar">
+                        <div class="funnel-bar-fill" style="width: ${(f.count / maxCount * 100)}%"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render Follow-up List
+            const activeLeads = allLeads.filter(lead => {
+                const status = (lead['Status'] || '').toLowerCase();
+                return !status.includes('enrolled') && !status.includes('completed') && !status.includes('lost');
+            });
+
+            if (activeLeads.length === 0) {
+                document.getElementById('followupList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✅</div>
+                        <p>No pending follow-ups!</p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('followupList').innerHTML = activeLeads.slice(0, 10).map(lead => `
+                    <div class="followup-item">
+                        <div style="flex: 1;">
+                            <div class="followup-name">${escapeHtml(lead['Candidate Full Name'] || 'Unknown')}</div>
+                            <div class="followup-meta">
+                                <span>🆔 ${escapeHtml(lead['Lead_ID'] || 'N/A')}</span>
+                                <span>📞 ${escapeHtml(lead['Phone Number'] || 'N/A')}</span>
+                                <span>👤 ${escapeHtml(lead['Counsellor Assigned'] || 'Unassigned')}</span>
+                            </div>
+                        </div>
+                        <span class="followup-status">${escapeHtml(lead['Status'] || 'New Lead')}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Render Source Breakdown
+            const sortedSources = Object.entries(stats.sources).sort((a, b) => b[1] - a[1]);
+            
+            if (sortedSources.length === 0) {
+                document.getElementById('sourceBreakdown').innerHTML = '<div class="source-item"><span>No data yet</span><span>0</span></div>';
+            } else {
+                document.getElementById('sourceBreakdown').innerHTML = sortedSources.slice(0, 8).map(([source, count]) => `
+                    <div class="source-item">
+                        <span class="source-name">${escapeHtml(source)}</span>
+                        <span class="source-count">${count}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Render Leads Table
+            renderLeadsTable();
+
+            console.log('✅ Dashboard rendered');
+        }
+
+        // ============================================
+        // LEADS TABLE
+        // ============================================
+        function renderLeadsTable() {
+            const tbody = document.getElementById('leadsTableBody');
+            const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            
+            let filtered = allLeads;
+            if (searchTerm) {
+                filtered = allLeads.filter(lead => 
+                    (lead['Candidate Full Name'] || '').toLowerCase().includes(searchTerm) ||
+                    (lead['Phone Number'] || '').toLowerCase().includes(searchTerm) ||
+                    (lead['Lead_ID'] || '').toLowerCase().includes(searchTerm)
+                );
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #888;">No leads found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(lead => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px; font-family: monospace; color: #1a237e; font-weight: 600;">${escapeHtml(lead['Lead_ID'] || 'N/A')}</td>
+                    <td style="padding: 12px;">${escapeHtml(lead['Candidate Full Name'] || 'Unknown')}</td>
+                    <td style="padding: 12px;">${escapeHtml(lead['Phone Number'] || 'N/A')}</td>
+                    <td style="padding: 12px;">${escapeHtml(lead['Course Interested In'] || 'N/A')}</td>
+                    <td style="padding: 12px;">${escapeHtml(lead['Counsellor Assigned'] || 'Unassigned')}</td>
+                    <td style="padding: 12px;"><span class="followup-status">${escapeHtml(lead['Status'] || 'New Lead')}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function filterLeads() {
+            renderLeadsTable();
+        }
+
+        // ============================================
+        // UI HELPERS
+        // ============================================
+        function showView(view) {
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide views
+            document.getElementById('dashboardView').style.display = view === 'dashboard' ? 'block' : 'none';
+            document.getElementById('leadsView').style.display = view === 'leads' ? 'block' : 'none';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingState').style.display = show ? 'block' : 'none';
+            document.getElementById('dashboardView').style.display = show ? 'none' : 'block';
+        }
+
+        function showStatus(type, message) {
+            const banner = document.getElementById('statusBanner');
+            const icon = document.getElementById('statusIcon');
+            const msg = document.getElementById('statusMessage');
+            
+            banner.className = 'error-banner ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
+            icon.textContent = type === 'error' ? '❌' : type === 'success' ? '✅' : '⚠️';
+            msg.textContent = message;
+            banner.style.display = 'flex';
+        }
+
+        function hideStatus() {
+            document.getElementById('statusBanner').style.display = 'none';
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = now.toLocaleString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function openLeadForm() {
+            if (!CONFIG.formUrl || CONFIG.formUrl === 'YOUR_FORM_URL_HERE' || CONFIG.formUrl.includes('YOUR_')) {
+                alert('📝 Form URL not configured!\n\nPlease update CONFIG.formUrl in the HTML file with your Google Form URL.');
+                return;
+            }
+            window.open(CONFIG.formUrl, '_blank');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+    </script>
+
 </body>
 </html>
