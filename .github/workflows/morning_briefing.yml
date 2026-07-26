@@ -65,6 +65,7 @@ jobs:
           # Gmail credentials for email fallback
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          BRIEFING_RECIPIENTS: ${{ secrets.BRIEFING_RECIPIENTS }}
           # Test mode flag from manual trigger
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
         run: |
