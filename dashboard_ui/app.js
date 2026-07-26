@@ -292,7 +292,7 @@ async function saveChanges() {
         '&notes='  + encodeURIComponent(notes);
 
       console.log('📤 Saving to sheet:', leadId, '→', newStatus);
-      var resp = await fetch(url, { method: 'GET', mode: 'cors' });
+      var resp = await fetch(url, { redirect: 'follow' });
       var result = await resp.json();
 
       if (result.error) {
