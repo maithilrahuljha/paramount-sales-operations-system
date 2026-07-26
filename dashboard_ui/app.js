@@ -1,21 +1,15 @@
 /**
- * app.js — Paramount Merchant Navy Sales Dashboard.
+ * app.js — Paramount Merchant Navy Sales Dashboard v3
  *
- * Responsibilities:
- *   • Fetch published CSV data from Google Sheets (read-only URLs in config.js)
- *   • Parse CSV with a small dependency-free parser (handles quoted fields)
- *   • Render KPIs, priority follow-up list, latest leads, lead-source bars
- *   • Auto-refresh every config.refreshInterval ms (default 5 minutes)
- *
- * No build step, no frameworks — pure vanilla JS for GitHub Pages.
+ * FIXES from previous version:
+ *   1. Column names now match ACTUAL Google Sheet headers
+ *   2. Followup CSV URL was pubhtml (HTML) — must be pub?output=csv
+ *   3. Added column-name auto-detection (tries multiple possible names)
+ *   4. Added console logging so you can debug from F12
  */
 
 /* ============================ CSV parsing ============================ */
 
-/**
- * Minimal RFC-4180-ish CSV parser supporting quoted fields and commas
- * inside quotes. Returns an array of row-objects keyed by the header row.
- */
 function parseCsv(text) {
   const rows = [];
   let row = [], field = '', inQuotes = false;
@@ -51,25 +45,33 @@ function parseCsv(text) {
 
 const $ = id => document.getElementById(id);
 
-// Status values that indicate a lead is completed/enrolled (will be counted as admissions)
-const CLOSED_STATUSES = ['admitted', 'enrolled', 'completed', 'closed', 'converted', 'admission closed'];
+/**
+ * Get a field value from a row, trying multiple possible column names.
+ * This handles the mismatch between code and actual sheet headers.
+ */
+function getField(row, ...names) {
+  for (const name of names) {
+    if (row[name] !== undefined && row[name] !== '') return row[name];
+  }
+  return '';
+}
+
+// Status values that mean the lead is enrolled/admitted
+const CLOSED_STATUSES = ['enrolled', 'completed', 'admitted', 'closed', 'converted', 'admission closed'];
 
 function isConfigured(url) {
   return url && !url.includes('REPLACE_') && !url.includes('XXXXX') && url.includes('docs.google.com');
 }
 
-/** Robustly check if a sheet timestamp is today (handles common formats). */
 function isToday(value) {
   if (!value) return false;
   const now = new Date();
-  // Try native parsing first (ISO, "MM/DD/YYYY HH:MM:SS" etc.)
   const d = new Date(value);
   if (!isNaN(d)) {
     return d.getFullYear() === now.getFullYear() &&
-           d.getMonth() === now.getMonth() &&
-           d.getDate() === now.getDate();
+           d.getMonth()    === now.getMonth() &&
+           d.getDate()     === now.getDate();
   }
-  // Fallback: DD/MM/YYYY
   const m = String(value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m) {
     return +m[3] === now.getFullYear() && +m[2] === now.getMonth() + 1 && +m[1] === now.getDate();
@@ -92,33 +94,56 @@ function showBanner(message, isError) {
 function hideBanner() { $('statusBanner').classList.add('hidden'); }
 
 async function fetchCsv(url) {
+  console.log('📡 Fetching:', url.substring(0, 80) + '…');
   const resp = await fetch(url, { cache: 'no-store' });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching sheet CSV`);
-  return parseCsv(await resp.text());
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const text = await resp.text();
+
+  // Guard: if Google returned an HTML page instead of CSV, reject it
+  if (text.trimStart().startsWith('<!DOCTYPE') || text.trimStart().startsWith('<html')) {
+    throw new Error('URL returned an HTML page, not CSV. Make sure you publish as CSV (not "pubhtml").');
+  }
+
+  const data = parseCsv(text);
+  console.log('✅ Parsed', data.length, 'rows.  Headers:', data.length ? Object.keys(data[0]).join(', ') : '(none)');
+  return data;
 }
 
 /* ============================ Rendering ============================ */
 
+/**
+ * YOUR ACTUAL Lead_Register HEADERS (from Form Responses 1):
+ *   Lead_ID | Candidate Full Name | Email Address | Phone Number |
+ *   City / Location | Course Interested In | How did you hear about us? |
+ *   Preferred Batch Month | Current Education Level | Counsellor Assigned |
+ *   Additional Remarks | Status
+ *
+ * The getField() helper tries both old names AND your real names,
+ * so the dashboard works no matter which header format your sheet uses.
+ */
+
 function renderKpis(leads) {
   const total = leads.length;
-  const today = leads.filter(l => isToday(l['Timestamp'])).length;
-  
-  // Count admissions based on "Status" column (new column from Google Form)
-  const status = l => (l['Status'] || '').toLowerCase();
-  const admissions = leads.filter(l => CLOSED_STATUSES.includes(status(l))).length;
-  
+
+  // Today's leads — try "Timestamp" first (auto-added by Forms)
+  const today = leads.filter(l => isToday(getField(l, 'Timestamp'))).length;
+
+  // Status column
+  const getStatus = l => getField(l, 'Status', 'Lead_Status').toLowerCase();
+  const admissions = leads.filter(l => CLOSED_STATUSES.includes(getStatus(l))).length;
   const conversion = total ? ((admissions / total) * 100).toFixed(1) + '%' : '0%';
 
-  $('kpiTodayLeads').textContent = today;
-  $('kpiTotalLeads').textContent = total;
-  $('kpiAdmissions').textContent = admissions;
-  $('kpiConversion').textContent = conversion;
+  $('kpiTodayLeads').textContent  = today;
+  $('kpiTotalLeads').textContent  = total;
+  $('kpiAdmissions').textContent  = admissions;
+  $('kpiConversion').textContent  = conversion;
 }
 
 function renderSources(leads) {
   const counts = {};
   leads.forEach(l => {
-    const src = l['Lead Source'] || 'Unknown';
+    // Try your actual header first, then fall back
+    const src = getField(l, 'How did you hear about us?', 'Lead Source', 'Source') || 'Unknown';
     counts[src] = (counts[src] || 0) + 1;
   });
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
@@ -135,41 +160,48 @@ function renderSources(leads) {
 }
 
 function renderFollowups(followups) {
-  // Priority list = P1/P2, not yet completed, sorted P1 first then by date.
   const open = followups
-    .filter(f => /^p[12]/i.test((f['Priority'] || '').trim()))
-    .filter(f => !['done', 'completed', 'closed'].includes((f['Status'] || '').toLowerCase()))
-    .sort((a, b) => (a['Priority'] || '').localeCompare(b['Priority'] || '') ||
-                    (a['Followup Date'] || '').localeCompare(b['Followup Date'] || ''));
+    .filter(f => {
+      const p = getField(f, 'Priority', 'Follow_up_Priority', 'Followup_Priority').trim();
+      return /^p[12]/i.test(p);
+    })
+    .filter(f => {
+      const s = getField(f, 'Status', 'Call_Status').toLowerCase();
+      return !['done', 'completed', 'closed', 'enrolled', 'lost'].includes(s);
+    })
+    .sort((a, b) => {
+      const pa = getField(a, 'Priority', 'Follow_up_Priority');
+      const pb = getField(b, 'Priority', 'Follow_up_Priority');
+      return pa.localeCompare(pb);
+    });
 
   $('followupCount').textContent = open.length;
   $('followupBody').innerHTML = open.length
     ? open.slice(0, 25).map(f => {
-        const p = (f['Priority'] || '').toUpperCase();
+        const p = getField(f, 'Priority', 'Follow_up_Priority').toUpperCase();
         const badge = p.startsWith('P1') ? 'badge-p1' : 'badge-p2';
         return `<tr>
           <td><span class="badge ${badge}">${escapeHtml(p.split(' ')[0] || p)}</span></td>
-          <td>${escapeHtml(f['Candidate Name'] || '')}</td>
-          <td><a href="tel:${escapeHtml(f['Phone Number'] || '')}">${escapeHtml(f['Phone Number'] || '')}</a></td>
-          <td>${escapeHtml(f['Followup Date'] || '')}</td>
-          <td>${escapeHtml(f['Assigned Counselor'] || '')}</td>
+          <td>${escapeHtml(getField(f, 'Candidate Full Name', 'Student_Name', 'Candidate Name', 'Name'))}</td>
+          <td><a href="tel:${escapeHtml(getField(f, 'Phone Number', 'Phone', 'Contact_Number'))}">${escapeHtml(getField(f, 'Phone Number', 'Phone', 'Contact_Number'))}</a></td>
+          <td>${escapeHtml(getField(f, 'Next Followup Date', 'Next_Followup_Date', 'Followup Date', 'Follow_up_Date'))}</td>
+          <td>${escapeHtml(getField(f, 'Counsellor Assigned', 'Counselor_Name', 'Assigned Counselor', 'Counselor'))}</td>
         </tr>`;
       }).join('')
     : '<tr><td colspan="5" class="muted">No open P1/P2 follow-ups 🎉</td></tr>';
 }
 
 function renderLeads(leads) {
-  const latest = leads.slice(-10).reverse(); // newest rows are at the bottom
+  const latest = leads.slice(-10).reverse();
   $('leadsBody').innerHTML = latest.length
     ? latest.map(l => {
-        const status = (l['Status'] || 'New').trim();
-        // Check if status is a closed/admitted status
+        const status = getField(l, 'Status', 'Lead_Status') || 'New Lead';
         const isClosed = CLOSED_STATUSES.includes(status.toLowerCase());
         const cls = isClosed ? 'badge-closed' : 'badge-open';
         return `<tr>
-          <td>${escapeHtml(l['Lead ID'] || '—')}</td>
-          <td>${escapeHtml(l['Candidate Name'] || '')}</td>
-          <td>${escapeHtml(l['Course Interested'] || '')}</td>
+          <td>${escapeHtml(getField(l, 'Lead_ID', 'Lead ID') || '—')}</td>
+          <td>${escapeHtml(getField(l, 'Candidate Full Name', 'Candidate Name', 'Student_Name', 'Name'))}</td>
+          <td>${escapeHtml(getField(l, 'Course Interested In', 'Course Interested', 'Course', 'Course_Interest'))}</td>
           <td><span class="badge ${cls}">${escapeHtml(status)}</span></td>
         </tr>`;
       }).join('')
@@ -179,29 +211,43 @@ function renderLeads(leads) {
 /* ============================ Refresh loop ============================ */
 
 async function refresh() {
-  const leadsOk = isConfigured(config.leadRegisterCsvUrl);
+  console.log('🔄 Refreshing dashboard…');
+  const leadsOk  = isConfigured(config.leadRegisterCsvUrl);
   const followOk = isConfigured(config.followupTrackerCsvUrl);
 
   if (!leadsOk && !followOk) {
-    showBanner('⚙️ Setup pending: publish your Google Sheets to the web as CSV and paste the URLs into dashboard_ui/config.js (see README Step 1 & 4).');
+    showBanner('⚙️ Setup pending: publish your Google Sheets to the web as CSV and paste the URLs into dashboard_ui/config.js (see README).');
     return;
   }
 
   try {
     hideBanner();
+
     if (leadsOk) {
       const leads = await fetchCsv(config.leadRegisterCsvUrl);
       renderKpis(leads);
       renderSources(leads);
       renderLeads(leads);
     }
+
     if (followOk) {
-      const followups = await fetchCsv(config.followupTrackerCsvUrl);
-      renderFollowups(followups);
+      try {
+        const followups = await fetchCsv(config.followupTrackerCsvUrl);
+        renderFollowups(followups);
+      } catch (fErr) {
+        console.warn('⚠️ Followup sheet error (non-fatal):', fErr.message);
+        $('followupCount').textContent = '!';
+        $('followupBody').innerHTML =
+          '<tr><td colspan="5" class="muted">⚠️ Could not load follow-ups: ' +
+          escapeHtml(fErr.message) + '</td></tr>';
+      }
     }
+
     $('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    console.log('✅ Dashboard refreshed');
+
   } catch (err) {
-    console.error(err);
+    console.error('❌ Refresh error:', err);
     showBanner('⚠️ Could not load sheet data: ' + err.message +
       ' — check the CSV URLs are published and public.', true);
   }
@@ -210,7 +256,7 @@ async function refresh() {
 /* ============================ Init ============================ */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Branding
+  console.log('🚀 Dashboard starting…');
   document.title = '⚓ ' + config.branding.title + ' — Sales Dashboard';
 
   // Quick Add button
@@ -220,14 +266,14 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     quickAdd.addEventListener('click', e => {
       e.preventDefault();
-      alert('Add your Google Form URL to dashboard_ui/config.js (quickAddFormUrl) first.');
+      alert('Add your Google Form URL to config.js (quickAddFormUrl) first.');
     });
   }
 
   // Manual refresh
   $('refreshBtn').addEventListener('click', refresh);
 
-  // First load + auto refresh every 5 minutes
+  // First load + auto refresh
   refresh();
   setInterval(refresh, config.refreshInterval || 300000);
 });
