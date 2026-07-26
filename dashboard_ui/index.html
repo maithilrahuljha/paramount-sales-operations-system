@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>⚓ Paramount Merchant Navy — Sales Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
   <!-- Header -->
@@ -17,73 +17,141 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <button id="refreshBtn" class="btn btn-outline" title="Refresh data now">⟳ Refresh</button>
-      <a id="quickAddBtn" class="btn btn-gold" href="#" target="_blank" rel="noopener">＋ Quick Add Lead</a>
+      <button id="refreshBtn" class="btn btn-outline">⟳ Refresh</button>
+      <a id="quickAddBtn" class="btn btn-gold" href="#" target="_blank">＋ Quick Add Lead</a>
     </div>
   </header>
 
-  <!-- Status banner -->
   <div id="statusBanner" class="banner hidden"></div>
 
   <main class="grid">
-    <!-- Left column: KPIs -->
+    <!-- Left: KPIs + Sources -->
     <section class="col">
       <h2 class="section-title">📊 Key Metrics</h2>
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-value" id="kpiTodayLeads">—</div>
-          <div class="kpi-label">Today's New Leads</div>
-        </div>
-        <div class="kpi-card">
           <div class="kpi-value" id="kpiTotalLeads">—</div>
           <div class="kpi-label">Total Leads</div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-value" id="kpiAdmissions">—</div>
-          <div class="kpi-label">Admissions Closed</div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-value" id="kpiEnrolled">—</div>
+          <div class="kpi-label">Enrolled</div>
         </div>
         <div class="kpi-card kpi-highlight">
           <div class="kpi-value" id="kpiConversion">—</div>
-          <div class="kpi-label">Conversion Rate</div>
+          <div class="kpi-label">Conversion %</div>
+        </div>
+        <div class="kpi-card kpi-orange">
+          <div class="kpi-value" id="kpiPending">—</div>
+          <div class="kpi-label">Need Follow-up</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpiNew">—</div>
+          <div class="kpi-label">New Leads</div>
+        </div>
+        <div class="kpi-card kpi-red">
+          <div class="kpi-value" id="kpiLost">—</div>
+          <div class="kpi-label">Lost</div>
         </div>
       </div>
 
       <h2 class="section-title">🧭 Lead Sources</h2>
-      <div class="card" id="sourceBreakdown">
-        <p class="muted">Waiting for data…</p>
-      </div>
+      <div class="card" id="sourceBreakdown"><p class="muted">Waiting…</p></div>
+
+      <h2 class="section-title">📈 Status Funnel</h2>
+      <div class="card" id="statusFunnel"><p class="muted">Waiting…</p></div>
     </section>
 
-    <!-- Right column: Follow-ups + Latest Leads -->
+    <!-- Right: All Leads table (interactive) -->
     <section class="col">
-      <h2 class="section-title">🔥 Priority Follow-ups <span class="pill" id="followupCount">0</span></h2>
-      <div class="card table-card">
-        <table>
-          <thead>
-            <tr><th>Priority</th><th>Candidate</th><th>Phone</th><th>Due</th><th>Counselor</th></tr>
-          </thead>
-          <tbody id="followupBody">
-            <tr><td colspan="5" class="muted">Waiting for data…</td></tr>
-          </tbody>
-        </table>
+      <h2 class="section-title">📋 All Leads <span class="pill" id="leadCount">0</span></h2>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="searchBox" placeholder="🔍 Search name / phone / ID…" class="input-search"/>
+        <select id="filterStatus" class="input-search" style="max-width:180px;">
+          <option value="">All Statuses</option>
+          <option>New Lead</option>
+          <option>Contacted</option>
+          <option>Interested</option>
+          <option>Counselling Scheduled</option>
+          <option>Admission Pending</option>
+          <option>Enrolled</option>
+          <option>Completed</option>
+          <option>Lost</option>
+        </select>
       </div>
-
-      <h2 class="section-title">🆕 Latest Leads</h2>
       <div class="card table-card">
         <table>
           <thead>
-            <tr><th>Lead ID</th><th>Name</th><th>Course</th><th>Status</th></tr>
+            <tr>
+              <th>Lead ID</th>
+              <th>Name</th>
+              <th>📞 Phone</th>
+              <th>Course</th>
+              <th>Counsellor</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody id="leadsBody">
-            <tr><td colspan="4" class="muted">Waiting for data…</td></tr>
+            <tr><td colspan="7" class="muted">Loading…</td></tr>
           </tbody>
         </table>
       </div>
     </section>
   </main>
 
+  <!-- ===== EDIT MODAL ===== -->
+  <div id="modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>✏️ <span id="mLeadId">PMN-2026-0001</span></h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Lead info -->
+        <div class="lead-info">
+          <div class="info-row"><span class="info-label">👤 Name</span><span id="mName">—</span></div>
+          <div class="info-row"><span class="info-label">📞 Phone</span><span id="mPhone">—</span></div>
+          <div class="info-row"><span class="info-label">📧 Email</span><span id="mEmail">—</span></div>
+          <div class="info-row"><span class="info-label">📚 Course</span><span id="mCourse">—</span></div>
+          <div class="info-row"><span class="info-label">🏙️ City</span><span id="mCity">—</span></div>
+          <div class="info-row"><span class="info-label">👨‍💼 Counsellor</span><span id="mCounsellor">—</span></div>
+          <div class="info-row"><span class="info-label">📊 Current</span><span id="mCurrentStatus" class="badge badge-open">—</span></div>
+        </div>
+
+        <!-- Status change -->
+        <h4 style="margin:16px 0 10px;">Change Status</h4>
+        <div class="status-flow">
+          <button class="st-btn" data-st="New Lead">🆕 New Lead</button>
+          <button class="st-btn" data-st="Contacted">📞 Contacted</button>
+          <button class="st-btn" data-st="Interested">🔥 Interested</button>
+          <button class="st-btn" data-st="Counselling Scheduled">📅 Scheduled</button>
+          <button class="st-btn" data-st="Admission Pending">⏳ Pending</button>
+        </div>
+        <div class="status-final">
+          <button class="st-btn st-green" data-st="Enrolled">✅ Enrolled</button>
+          <button class="st-btn st-green" data-st="Completed">✅ Completed</button>
+          <button class="st-btn st-red" data-st="Lost">❌ Lost</button>
+        </div>
+
+        <!-- Notes -->
+        <h4 style="margin:16px 0 8px;">Add Comment / Notes</h4>
+        <textarea id="mNotes" rows="3" placeholder="Follow-up notes, callback details…" class="input-notes"></textarea>
+
+        <!-- Previous remarks -->
+        <h4 style="margin:16px 0 8px;">Previous Remarks</h4>
+        <div id="mRemarks" class="remarks-box">No previous remarks</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-gold" id="saveBtn" disabled onclick="saveChanges()">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
     <span>⚓ Paramount Merchant Navy CRM</span>
+    <span id="editMode" class="edit-indicator">📖 Read-only — deploy Apps Script Web App for edit access</span>
     <span id="lastUpdated">Last updated: never</span>
   </footer>
 
