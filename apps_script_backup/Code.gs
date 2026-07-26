@@ -48,8 +48,8 @@ const CFG = {
     BATCH: 9,        // I
     EDUCATION: 10,   // J
     COUNSELLOR: 11,  // K
-    REMARKS: 12,     // L
-    STATUS: 13       // M
+    STATUS: 12,     // L
+    REMARKS: 13       // M
   },
   DEFAULT_STATUS: 'New Lead',
   ARCHIVE_STATUSES: ['Enrolled', 'Completed', 'Lost'],
