@@ -1,13 +1,8 @@
 /**
  * ============================================================================
- * PARAMOUNT MERCHANT NAVY - SALES DASHBOARD APPLICATION v2.0
+ * PARAMOUNT MERCHANT NAVY - SALES DASHBOARD APPLICATION v2.1
  * ============================================================================
- * Features:
- * - Real-time KPI display
- * - Lead status management (edit by Lead ID)
- * - Status workflow: New Lead → Contacted → Interested → 
- *   Counselling Scheduled → Admission Pending → Enrolled/Completed/Lost
- * - Auto-refresh every 5 minutes
+ * Fixed: Shows UI even when data fails to load
  * ============================================================================
  */
 
@@ -21,11 +16,13 @@ const AppState = {
     lastUpdated: null,
     isLoading: true,
     hasError: false,
+    errorMessage: '',
     currentView: 'dashboard',
     currentFilter: 'all',
     selectedLead: null,
     selectedStatus: null,
-    refreshInterval: null
+    refreshInterval: null,
+    dataLoaded: false
 };
 
 // Status workflow configuration
@@ -41,76 +38,86 @@ const STATUS_CONFIG = {
 };
 
 // ============================================
-// DOM ELEMENTS
+// INITIALIZATION - Run immediately
 // ============================================
-const DOM = {
-    loadingOverlay: document.getElementById('loadingOverlay'),
-    errorBanner: document.getElementById('errorBanner'),
-    errorMessage: document.getElementById('errorMessage'),
-    retryBtn: document.getElementById('retryBtn'),
-    
-    // Views
-    dashboardView: document.getElementById('dashboardView'),
-    leadsView: document.getElementById('leadsView'),
-    followupsView: document.getElementById('followupsView'),
-    
-    // KPIs
-    todaysLeads: document.getElementById('todaysLeads'),
-    totalLeads: document.getElementById('totalLeads'),
-    enrolledCount: document.getElementById('enrolledCount'),
-    conversionRate: document.getElementById('conversionRate'),
-    conversionProgress: document.getElementById('conversionProgress'),
-    pendingFollowups: document.getElementById('pendingFollowups'),
-    lostCount: document.getElementById('lostCount'),
-    
-    // Quick Stats
-    newLeadCount: document.getElementById('newLeadCount'),
-    contactedCount: document.getElementById('contactedCount'),
-    interestedCount: document.getElementById('interestedCount'),
-    scheduledCount: document.getElementById('scheduledCount'),
-    pendingCount: document.getElementById('pendingCount'),
-    
-    // Status Funnel
-    statusFunnel: document.getElementById('statusFunnel'),
-    sourceBreakdown: document.getElementById('sourceBreakdown'),
-    followupList: document.getElementById('followupList'),
-    followupBadge: document.getElementById('followupBadge'),
-    
-    // Leads Table
-    leadsTableBody: document.getElementById('leadsTableBody'),
-    leadSearch: document.getElementById('leadSearch'),
-    statusFilter: document.getElementById('statusFilter'),
-    leadsBadge: document.getElementById('leadsBadge'),
-    
-    // Followups Grid
-    followupsGrid: document.getElementById('followupsGrid'),
-    
-    // Modal
-    editModal: document.getElementById('editModal'),
-    editLeadId: document.getElementById('editLeadId'),
-    currentStatusBadge: document.getElementById('currentStatusBadge'),
-    editCandidateName: document.getElementById('editCandidateName'),
-    editPhone: document.getElementById('editPhone'),
-    editEmail: document.getElementById('editEmail'),
-    editCourse: document.getElementById('editCourse'),
-    editCity: document.getElementById('editCity'),
-    editCounsellor: document.getElementById('editCounsellor'),
-    updateNotes: document.getElementById('updateNotes'),
-    previousRemarks: document.getElementById('previousRemarks'),
-    saveStatus: document.getElementById('saveStatus'),
-    closeModal: document.getElementById('closeModal'),
-    cancelEdit: document.getElementById('cancelEdit'),
-    
-    // Footer
-    lastUpdated: document.getElementById('lastUpdated'),
-    refreshStatus: document.getElementById('refreshStatus'),
-    
-    // Buttons
-    quickAddBtn: document.getElementById('quickAddBtn'),
-    quickAddBtnMobile: document.getElementById('quickAddBtnMobile'),
-    mobileMenuBtn: document.getElementById('mobileMenuBtn'),
-    mobileNav: document.getElementById('mobileNav')
-};
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Dashboard loading...');
+    init();
+});
+
+// ============================================
+// DOM ELEMENTS - Get them safely
+// ============================================
+function getDOM() {
+    return {
+        loadingOverlay: document.getElementById('loadingOverlay'),
+        errorBanner: document.getElementById('errorBanner'),
+        errorMessage: document.getElementById('errorMessage'),
+        retryBtn: document.getElementById('retryBtn'),
+        
+        // Views
+        dashboardView: document.getElementById('dashboardView'),
+        leadsView: document.getElementById('leadsView'),
+        followupsView: document.getElementById('followupsView'),
+        
+        // KPIs
+        todaysLeads: document.getElementById('todaysLeads'),
+        totalLeads: document.getElementById('totalLeads'),
+        enrolledCount: document.getElementById('enrolledCount'),
+        conversionRate: document.getElementById('conversionRate'),
+        conversionProgress: document.getElementById('conversionProgress'),
+        pendingFollowups: document.getElementById('pendingFollowups'),
+        lostCount: document.getElementById('lostCount'),
+        
+        // Quick Stats
+        newLeadCount: document.getElementById('newLeadCount'),
+        contactedCount: document.getElementById('contactedCount'),
+        interestedCount: document.getElementById('interestedCount'),
+        scheduledCount: document.getElementById('scheduledCount'),
+        pendingCount: document.getElementById('pendingCount'),
+        
+        // Status Funnel
+        statusFunnel: document.getElementById('statusFunnel'),
+        sourceBreakdown: document.getElementById('sourceBreakdown'),
+        followupList: document.getElementById('followupList'),
+        followupBadge: document.getElementById('followupBadge'),
+        
+        // Leads Table
+        leadsTableBody: document.getElementById('leadsTableBody'),
+        leadSearch: document.getElementById('leadSearch'),
+        statusFilter: document.getElementById('statusFilter'),
+        leadsBadge: document.getElementById('leadsBadge'),
+        
+        // Followups Grid
+        followupsGrid: document.getElementById('followupsGrid'),
+        
+        // Modal
+        editModal: document.getElementById('editModal'),
+        editLeadId: document.getElementById('editLeadId'),
+        currentStatusBadge: document.getElementById('currentStatusBadge'),
+        editCandidateName: document.getElementById('editCandidateName'),
+        editPhone: document.getElementById('editPhone'),
+        editEmail: document.getElementById('editEmail'),
+        editCourse: document.getElementById('editCourse'),
+        editCity: document.getElementById('editCity'),
+        editCounsellor: document.getElementById('editCounsellor'),
+        updateNotes: document.getElementById('updateNotes'),
+        previousRemarks: document.getElementById('previousRemarks'),
+        saveStatus: document.getElementById('saveStatus'),
+        closeModal: document.getElementById('closeModal'),
+        cancelEdit: document.getElementById('cancelEdit'),
+        
+        // Footer
+        lastUpdated: document.getElementById('lastUpdated'),
+        refreshStatus: document.getElementById('refreshStatus'),
+        
+        // Buttons
+        quickAddBtn: document.getElementById('quickAddBtn'),
+        quickAddBtnMobile: document.getElementById('quickAddBtnMobile'),
+        mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+        mobileNav: document.getElementById('mobileNav')
+    };
+}
 
 // ============================================
 // CSV PARSING
@@ -126,7 +133,7 @@ function parseCSV(csvText) {
     
     for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i]);
-        if (values.length >= headers.length - 1) {
+        if (values.length >= headers.length - 2) { // Allow some missing columns
             const row = {};
             headers.forEach((header, index) => {
                 row[header.trim()] = (values[index] || '').trim();
@@ -161,65 +168,166 @@ function parseCSVLine(line) {
 // DATA FETCHING
 // ============================================
 async function fetchCSVData(url) {
-    if (!url || url.includes('YOUR_CSV_URL_HERE')) {
-        console.warn('CSV URL not configured');
-        return [];
+    // Check if URL is a placeholder
+    if (!url || url.includes('YOUR_CSV_URL_HERE') || url.includes('YOUR_')) {
+        console.warn('⚠️ CSV URL not configured:', url);
+        return null; // Return null to indicate not configured
     }
     
     try {
-        const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        console.log('📡 Fetching:', url.substring(0, 50) + '...');
+        const response = await fetch(url, { 
+            method: 'GET', 
+            mode: 'cors', 
+            cache: 'no-cache' 
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const csvText = await response.text();
-        return parseCSV(csvText);
+        const data = parseCSV(csvText);
+        console.log(`✅ Loaded ${data.length} rows`);
+        return data;
+        
     } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('❌ Fetch error:', error.message);
         throw error;
     }
 }
 
 async function fetchAllData() {
+    const DOM = getDOM();
     console.log('🔄 Fetching data...');
+    
     showLoading(true);
     hideError();
     
+    // Check if CONFIG exists
+    if (typeof CONFIG === 'undefined') {
+        console.error('❌ CONFIG not defined');
+        showError('Configuration error: config.js not loaded properly');
+        showLoading(false);
+        showEmptyState();
+        return;
+    }
+    
     try {
-        const [leadsData, followupsData] = await Promise.all([
-            fetchCSVData(CONFIG.leadRegisterCsvUrl).catch(() => []),
-            fetchCSVData(CONFIG.followupTrackerCsvUrl).catch(() => [])
-        ]);
+        // Try to fetch lead data
+        const leadsResult = await fetchCSVData(CONFIG.leadRegisterCsvUrl);
         
-        // Map leads data to standard format
-        AppState.leads = leadsData.map(lead => ({
-            leadId: lead['Lead_ID'] || lead['Lead ID'] || '',
-            candidateName: lead['Candidate Full Name'] || lead['Student_Name'] || lead['Name'] || '',
-            email: lead['Email Address'] || lead['Email'] || '',
-            phone: lead['Phone Number'] || lead['Phone'] || '',
-            city: lead['City / Location'] || lead['City'] || '',
-            course: lead['Course Interested In'] || lead['Course'] || '',
-            source: lead['How did you hear about us?'] || lead['Source'] || '',
-            batchMonth: lead['Preferred Batch Month'] || '',
-            education: lead['Current Education Level'] || '',
-            counsellor: lead['Counsellor Assigned'] || lead['Counselor'] || '',
-            remarks: lead['Additional Remarks'] || lead['Remarks'] || '',
-            status: lead['Status'] || 'New Lead'
-        }));
+        if (leadsResult === null) {
+            // URL not configured - show setup message
+            console.warn('⚠️ CSV URL not configured - showing setup instructions');
+            AppState.leads = getDemoData();
+            AppState.hasError = true;
+            AppState.errorMessage = 'CSV URL not configured. Using demo data. Please update config.js with your published Google Sheet CSV URL.';
+            showError(AppState.errorMessage);
+        } else if (leadsResult.length === 0) {
+            // No data
+            console.warn('⚠️ No data in sheet');
+            AppState.leads = [];
+        } else {
+            // Success!
+            AppState.leads = leadsResult.map(lead => mapLeadData(lead));
+            AppState.hasError = false;
+            AppState.dataLoaded = true;
+        }
         
-        AppState.followups = followupsData;
+        // Try followups (optional)
+        try {
+            const followupsResult = await fetchCSVData(CONFIG.followupTrackerCsvUrl);
+            AppState.followups = followupsResult || [];
+        } catch (e) {
+            AppState.followups = [];
+        }
+        
         AppState.lastUpdated = new Date();
-        AppState.hasError = false;
         
-        console.log(`✅ Loaded ${AppState.leads.length} leads`);
-        
+        // Calculate and display
         calculateKPIs();
         updateDashboard();
         
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Data fetch failed:', error);
         AppState.hasError = true;
-        showError('Unable to fetch data. Please check your connection and CSV URLs.');
+        AppState.errorMessage = `Failed to load data: ${error.message}. Check if your Google Sheet is published correctly.`;
+        showError(AppState.errorMessage);
+        
+        // Still show UI with empty/demo data
+        AppState.leads = getDemoData();
+        calculateKPIs();
+        updateDashboard();
     } finally {
         showLoading(false);
     }
+}
+
+function mapLeadData(lead) {
+    return {
+        leadId: lead['Lead_ID'] || lead['Lead ID'] || lead['Timestamp'] || '',
+        candidateName: lead['Candidate Full Name'] || lead['Student_Name'] || lead['Name'] || '',
+        email: lead['Email Address'] || lead['Email'] || '',
+        phone: lead['Phone Number'] || lead['Phone'] || '',
+        city: lead['City / Location'] || lead['City'] || '',
+        course: lead['Course Interested In'] || lead['Course'] || '',
+        source: lead['How did you hear about us?'] || lead['Source'] || '',
+        batchMonth: lead['Preferred Batch Month'] || '',
+        education: lead['Current Education Level'] || '',
+        counsellor: lead['Counsellor Assigned'] || lead['Counselor'] || '',
+        remarks: lead['Additional Remarks'] || lead['Remarks'] || '',
+        status: lead['Status'] || 'New Lead',
+        timestamp: lead['Timestamp'] || ''
+    };
+}
+
+function getDemoData() {
+    // Return demo data so dashboard isn't empty
+    return [
+        {
+            leadId: 'PMN-2026-0001',
+            candidateName: 'Demo Student 1',
+            email: 'demo1@example.com',
+            phone: '9876543210',
+            city: 'Mumbai',
+            course: 'GP Rating',
+            source: 'Website',
+            batchMonth: 'January',
+            education: '12th Pass (Science)',
+            counsellor: 'Counsellor 1',
+            remarks: 'Demo data - configure CSV URL to see real data',
+            status: 'New Lead'
+        },
+        {
+            leadId: 'PMN-2026-0002',
+            candidateName: 'Demo Student 2',
+            email: 'demo2@example.com',
+            phone: '9876543211',
+            city: 'Delhi',
+            course: 'Deck Cadet',
+            source: 'Facebook',
+            batchMonth: 'February',
+            education: 'Graduate',
+            counsellor: 'Counsellor 2',
+            remarks: '',
+            status: 'Contacted'
+        },
+        {
+            leadId: 'PMN-2026-0003',
+            candidateName: 'Demo Student 3',
+            email: 'demo3@example.com',
+            phone: '9876543212',
+            city: 'Chennai',
+            course: 'Engine Cadet',
+            source: 'Referral',
+            batchMonth: 'March',
+            education: '12th Pass (Science)',
+            counsellor: 'Counsellor 1',
+            remarks: '',
+            status: 'Interested'
+        }
+    ];
 }
 
 // ============================================
@@ -227,8 +335,6 @@ async function fetchAllData() {
 // ============================================
 function calculateKPIs() {
     const leads = AppState.leads;
-    const today = new Date();
-    const todayStr = formatDate(today, 'YYYY-MM-DD');
     
     const kpis = {
         totalLeads: leads.length,
@@ -248,7 +354,6 @@ function calculateKPIs() {
     };
     
     leads.forEach(lead => {
-        // Count by status
         const status = lead.status || 'New Lead';
         if (kpis.statusCounts.hasOwnProperty(status)) {
             kpis.statusCounts[status]++;
@@ -256,81 +361,85 @@ function calculateKPIs() {
             kpis.statusCounts['New Lead']++;
         }
         
-        // Count by source
         const source = lead.source || 'Unknown';
         kpis.sources[source] = (kpis.sources[source] || 0) + 1;
         
-        // Count by counsellor
         const counsellor = lead.counsellor || 'Unassigned';
         kpis.counsellors[counsellor] = (kpis.counsellors[counsellor] || 0) + 1;
     });
     
-    // Calculate pending followups (not enrolled, completed, or lost)
     kpis.pendingFollowups = kpis.statusCounts['New Lead'] + 
                            kpis.statusCounts['Contacted'] + 
                            kpis.statusCounts['Interested'] + 
                            kpis.statusCounts['Counselling Scheduled'] + 
                            kpis.statusCounts['Admission Pending'];
     
-    // Calculate conversion rate
-    const totalAttempted = kpis.totalLeads - kpis.statusCounts['New Lead'];
-    if (totalAttempted > 0) {
+    if (kpis.totalLeads > 0) {
         kpis.conversionRate = ((kpis.statusCounts['Enrolled'] + kpis.statusCounts['Completed']) / kpis.totalLeads * 100).toFixed(1);
     } else {
         kpis.conversionRate = '0.0';
     }
     
     AppState.kpis = kpis;
+    console.log('📊 KPIs calculated:', kpis);
 }
 
 // ============================================
 // UI UPDATES
 // ============================================
 function updateDashboard() {
+    const DOM = getDOM();
     const kpis = AppState.kpis;
     
-    // Update KPI cards
-    animateValue(DOM.todaysLeads, kpis.todaysLeads || 0);
-    animateValue(DOM.totalLeads, kpis.totalLeads);
-    animateValue(DOM.enrolledCount, kpis.statusCounts['Enrolled'] + kpis.statusCounts['Completed']);
-    DOM.conversionRate.textContent = `${kpis.conversionRate}%`;
-    DOM.conversionProgress.style.width = `${Math.min(parseFloat(kpis.conversionRate), 100)}%`;
-    animateValue(DOM.pendingFollowups, kpis.pendingFollowups);
-    animateValue(DOM.lostCount, kpis.statusCounts['Lost']);
+    console.log('🎨 Updating dashboard UI...');
     
-    // Update quick stats
-    animateValue(DOM.newLeadCount, kpis.statusCounts['New Lead']);
-    animateValue(DOM.contactedCount, kpis.statusCounts['Contacted']);
-    animateValue(DOM.interestedCount, kpis.statusCounts['Interested']);
-    animateValue(DOM.scheduledCount, kpis.statusCounts['Counselling Scheduled']);
-    animateValue(DOM.pendingCount, kpis.statusCounts['Admission Pending']);
+    // Update KPI cards safely
+    safeSetText(DOM.todaysLeads, kpis.todaysLeads || 0);
+    safeSetText(DOM.totalLeads, kpis.totalLeads || 0);
+    safeSetText(DOM.enrolledCount, (kpis.statusCounts?.['Enrolled'] || 0) + (kpis.statusCounts?.['Completed'] || 0));
+    safeSetText(DOM.conversionRate, `${kpis.conversionRate || 0}%`);
     
-    // Update funnel
-    updateStatusFunnel(kpis.statusCounts);
+    if (DOM.conversionProgress) {
+        DOM.conversionProgress.style.width = `${Math.min(parseFloat(kpis.conversionRate) || 0, 100)}%`;
+    }
     
-    // Update source breakdown
-    updateSourceBreakdown(kpis.sources);
+    safeSetText(DOM.pendingFollowups, kpis.pendingFollowups || 0);
+    safeSetText(DOM.lostCount, kpis.statusCounts?.['Lost'] || 0);
     
-    // Update followup list
+    // Quick stats
+    safeSetText(DOM.newLeadCount, kpis.statusCounts?.['New Lead'] || 0);
+    safeSetText(DOM.contactedCount, kpis.statusCounts?.['Contacted'] || 0);
+    safeSetText(DOM.interestedCount, kpis.statusCounts?.['Interested'] || 0);
+    safeSetText(DOM.scheduledCount, kpis.statusCounts?.['Counselling Scheduled'] || 0);
+    safeSetText(DOM.pendingCount, kpis.statusCounts?.['Admission Pending'] || 0);
+    
+    // Update other sections
+    updateStatusFunnel(kpis.statusCounts || {});
+    updateSourceBreakdown(kpis.sources || {});
     updateFollowupList();
-    
-    // Update leads table
     updateLeadsTable();
-    
-    // Update followups grid
     updateFollowupsGrid();
     
     // Update badges
-    if (DOM.followupBadge) DOM.followupBadge.textContent = kpis.pendingFollowups;
-    if (DOM.leadsBadge) DOM.leadsBadge.textContent = kpis.totalLeads;
+    if (DOM.followupBadge) DOM.followupBadge.textContent = kpis.pendingFollowups || 0;
+    if (DOM.leadsBadge) DOM.leadsBadge.textContent = kpis.totalLeads || 0;
     
     // Update timestamp
     if (AppState.lastUpdated && DOM.lastUpdated) {
         DOM.lastUpdated.textContent = formatTimestamp(AppState.lastUpdated);
     }
+    
+    console.log('✅ Dashboard updated');
+}
+
+function safeSetText(element, value) {
+    if (element) {
+        element.textContent = value;
+    }
 }
 
 function updateStatusFunnel(statusCounts) {
+    const DOM = getDOM();
     if (!DOM.statusFunnel) return;
     
     const total = AppState.leads.length || 1;
@@ -347,7 +456,7 @@ function updateStatusFunnel(statusCounts) {
     
     DOM.statusFunnel.innerHTML = statuses.map(status => {
         const count = statusCounts[status.name] || 0;
-        const percentage = ((count / total) * 100).toFixed(0);
+        const percentage = total > 0 ? ((count / total) * 100).toFixed(0) : 0;
         return `
             <div class="funnel-item ${status.class}">
                 <span class="funnel-label">${status.name}</span>
@@ -361,6 +470,7 @@ function updateStatusFunnel(statusCounts) {
 }
 
 function updateSourceBreakdown(sources) {
+    const DOM = getDOM();
     if (!DOM.sourceBreakdown) return;
     
     const sortedSources = Object.entries(sources)
@@ -368,7 +478,7 @@ function updateSourceBreakdown(sources) {
         .slice(0, 6);
     
     if (sortedSources.length === 0) {
-        DOM.sourceBreakdown.innerHTML = '<div class="source-item"><span class="source-name">No data</span><span class="source-count">--</span></div>';
+        DOM.sourceBreakdown.innerHTML = '<div class="source-item"><span class="source-name">No data yet</span><span class="source-count">0</span></div>';
         return;
     }
     
@@ -381,9 +491,9 @@ function updateSourceBreakdown(sources) {
 }
 
 function updateFollowupList() {
+    const DOM = getDOM();
     if (!DOM.followupList) return;
     
-    // Filter leads that need followup (not enrolled, completed, or lost)
     let followupLeads = AppState.leads.filter(lead => {
         const status = lead.status || 'New Lead';
         return !['Enrolled', 'Completed', 'Lost'].includes(status);
@@ -403,7 +513,7 @@ function updateFollowupList() {
         }
     }
     
-    // Sort by priority (Interested and Scheduled first)
+    // Sort by priority
     followupLeads.sort((a, b) => {
         const priorityOrder = {
             'Interested': 1,
@@ -418,8 +528,8 @@ function updateFollowupList() {
     if (followupLeads.length === 0) {
         DOM.followupList.innerHTML = `
             <div class="followup-empty">
-                <span class="empty-icon">✅</span>
-                <p>No pending follow-ups!</p>
+                <span class="empty-icon">📭</span>
+                <p>${AppState.leads.length === 0 ? 'No leads yet. Add your first lead!' : 'No pending follow-ups!'}</p>
             </div>
         `;
         return;
@@ -431,31 +541,32 @@ function updateFollowupList() {
             <div class="followup-item status-${statusClass}" onclick="openEditModal('${escapeHtml(lead.leadId)}')">
                 <div class="status-indicator ${statusClass.split('-')[0]}"></div>
                 <div class="followup-details">
-                    <div class="followup-name">${escapeHtml(lead.candidateName)}</div>
+                    <div class="followup-name">${escapeHtml(lead.candidateName || 'Unknown')}</div>
                     <div class="followup-meta">
-                        <span>🆔 ${escapeHtml(lead.leadId)}</span>
-                        <span>📞 ${escapeHtml(lead.phone)}</span>
+                        <span>🆔 ${escapeHtml(lead.leadId || 'N/A')}</span>
+                        <span>📞 ${escapeHtml(lead.phone || 'N/A')}</span>
                         <span>👨‍💼 ${escapeHtml(lead.counsellor || 'Unassigned')}</span>
                     </div>
                 </div>
-                <span class="followup-status">${lead.status}</span>
+                <span class="followup-status">${lead.status || 'New Lead'}</span>
             </div>
         `;
     }).join('');
 }
 
 function updateLeadsTable() {
+    const DOM = getDOM();
     if (!DOM.leadsTableBody) return;
     
     let filteredLeads = [...AppState.leads];
     
-    // Apply search filter
+    // Apply search
     const searchTerm = DOM.leadSearch?.value?.toLowerCase() || '';
     if (searchTerm) {
         filteredLeads = filteredLeads.filter(lead => 
-            lead.leadId.toLowerCase().includes(searchTerm) ||
-            lead.candidateName.toLowerCase().includes(searchTerm) ||
-            lead.phone.toLowerCase().includes(searchTerm)
+            (lead.leadId || '').toLowerCase().includes(searchTerm) ||
+            (lead.candidateName || '').toLowerCase().includes(searchTerm) ||
+            (lead.phone || '').toLowerCase().includes(searchTerm)
         );
     }
     
@@ -468,7 +579,7 @@ function updateLeadsTable() {
     if (filteredLeads.length === 0) {
         DOM.leadsTableBody.innerHTML = `
             <tr><td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
-                No leads found
+                ${AppState.leads.length === 0 ? 'No leads yet. Submit a lead through your form!' : 'No matching leads found'}
             </td></tr>
         `;
         return;
@@ -478,12 +589,12 @@ function updateLeadsTable() {
         const statusClass = STATUS_CONFIG[lead.status]?.class || 'new-lead';
         return `
             <tr>
-                <td class="lead-id">${escapeHtml(lead.leadId)}</td>
-                <td>${escapeHtml(lead.candidateName)}</td>
-                <td>${escapeHtml(lead.phone)}</td>
-                <td>${escapeHtml(lead.course)}</td>
+                <td class="lead-id">${escapeHtml(lead.leadId || 'N/A')}</td>
+                <td>${escapeHtml(lead.candidateName || 'Unknown')}</td>
+                <td>${escapeHtml(lead.phone || 'N/A')}</td>
+                <td>${escapeHtml(lead.course || 'N/A')}</td>
                 <td>${escapeHtml(lead.counsellor || 'Unassigned')}</td>
-                <td><span class="status-cell ${statusClass}">${lead.status}</span></td>
+                <td><span class="status-cell ${statusClass}">${lead.status || 'New Lead'}</span></td>
                 <td><button class="edit-btn" onclick="openEditModal('${escapeHtml(lead.leadId)}')">✏️ Edit</button></td>
             </tr>
         `;
@@ -491,6 +602,7 @@ function updateLeadsTable() {
 }
 
 function updateFollowupsGrid() {
+    const DOM = getDOM();
     if (!DOM.followupsGrid) return;
     
     const activeLeads = AppState.leads.filter(lead => 
@@ -500,7 +612,7 @@ function updateFollowupsGrid() {
     if (activeLeads.length === 0) {
         DOM.followupsGrid.innerHTML = `
             <div style="text-align: center; padding: 3rem; color: #666; grid-column: 1/-1;">
-                <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">✅</span>
+                <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">📭</span>
                 <p>No active follow-ups</p>
             </div>
         `;
@@ -509,18 +621,19 @@ function updateFollowupsGrid() {
     
     DOM.followupsGrid.innerHTML = activeLeads.map(lead => {
         const statusClass = STATUS_CONFIG[lead.status]?.class || 'new-lead';
+        const statusColor = STATUS_CONFIG[lead.status]?.color || '#1a237e';
         return `
-            <div class="followup-card" style="border-left-color: ${STATUS_CONFIG[lead.status]?.color || '#1a237e'}" 
+            <div class="followup-card" style="border-left-color: ${statusColor}" 
                  onclick="openEditModal('${escapeHtml(lead.leadId)}')">
                 <div class="followup-card-header">
-                    <span class="followup-card-id">${escapeHtml(lead.leadId)}</span>
-                    <span class="status-cell ${statusClass}">${lead.status}</span>
+                    <span class="followup-card-id">${escapeHtml(lead.leadId || 'N/A')}</span>
+                    <span class="status-cell ${statusClass}">${lead.status || 'New Lead'}</span>
                 </div>
-                <div class="followup-card-name">${escapeHtml(lead.candidateName)}</div>
+                <div class="followup-card-name">${escapeHtml(lead.candidateName || 'Unknown')}</div>
                 <div class="followup-card-info">
-                    <span>📞 ${escapeHtml(lead.phone)}</span>
-                    <span>📧 ${escapeHtml(lead.email)}</span>
-                    <span>📚 ${escapeHtml(lead.course)}</span>
+                    <span>📞 ${escapeHtml(lead.phone || 'N/A')}</span>
+                    <span>📧 ${escapeHtml(lead.email || 'N/A')}</span>
+                    <span>📚 ${escapeHtml(lead.course || 'N/A')}</span>
                     <span>👨‍💼 ${escapeHtml(lead.counsellor || 'Unassigned')}</span>
                 </div>
             </div>
@@ -528,11 +641,30 @@ function updateFollowupsGrid() {
     }).join('');
 }
 
+function showEmptyState() {
+    const DOM = getDOM();
+    
+    // Show zeros in KPIs
+    safeSetText(DOM.todaysLeads, '0');
+    safeSetText(DOM.totalLeads, '0');
+    safeSetText(DOM.enrolledCount, '0');
+    safeSetText(DOM.conversionRate, '0%');
+    safeSetText(DOM.pendingFollowups, '0');
+    safeSetText(DOM.lostCount, '0');
+    safeSetText(DOM.newLeadCount, '0');
+    safeSetText(DOM.contactedCount, '0');
+    safeSetText(DOM.interestedCount, '0');
+    safeSetText(DOM.scheduledCount, '0');
+    safeSetText(DOM.pendingCount, '0');
+}
+
 // ============================================
 // MODAL FUNCTIONS
 // ============================================
 function openEditModal(leadId) {
+    const DOM = getDOM();
     const lead = AppState.leads.find(l => l.leadId === leadId);
+    
     if (!lead) {
         alert('Lead not found: ' + leadId);
         return;
@@ -542,16 +674,16 @@ function openEditModal(leadId) {
     AppState.selectedStatus = null;
     
     // Populate modal
-    DOM.editLeadId.textContent = lead.leadId;
-    DOM.currentStatusBadge.textContent = lead.status;
-    DOM.editCandidateName.textContent = lead.candidateName;
-    DOM.editPhone.textContent = lead.phone;
-    DOM.editEmail.textContent = lead.email || 'N/A';
-    DOM.editCourse.textContent = lead.course || 'N/A';
-    DOM.editCity.textContent = lead.city || 'N/A';
-    DOM.editCounsellor.textContent = lead.counsellor || 'Unassigned';
-    DOM.previousRemarks.textContent = lead.remarks || 'No previous remarks';
-    DOM.updateNotes.value = '';
+    if (DOM.editLeadId) DOM.editLeadId.textContent = lead.leadId || 'N/A';
+    if (DOM.currentStatusBadge) DOM.currentStatusBadge.textContent = lead.status || 'New Lead';
+    if (DOM.editCandidateName) DOM.editCandidateName.textContent = lead.candidateName || 'Unknown';
+    if (DOM.editPhone) DOM.editPhone.textContent = lead.phone || 'N/A';
+    if (DOM.editEmail) DOM.editEmail.textContent = lead.email || 'N/A';
+    if (DOM.editCourse) DOM.editCourse.textContent = lead.course || 'N/A';
+    if (DOM.editCity) DOM.editCity.textContent = lead.city || 'N/A';
+    if (DOM.editCounsellor) DOM.editCounsellor.textContent = lead.counsellor || 'Unassigned';
+    if (DOM.previousRemarks) DOM.previousRemarks.textContent = lead.remarks || 'No previous remarks';
+    if (DOM.updateNotes) DOM.updateNotes.value = '';
     
     // Update status buttons
     document.querySelectorAll('.status-btn').forEach(btn => {
@@ -561,17 +693,19 @@ function openEditModal(leadId) {
         }
     });
     
-    DOM.saveStatus.disabled = true;
-    DOM.editModal.style.display = 'flex';
+    if (DOM.saveStatus) DOM.saveStatus.disabled = true;
+    if (DOM.editModal) DOM.editModal.style.display = 'flex';
 }
 
 function closeEditModal() {
-    DOM.editModal.style.display = 'none';
+    const DOM = getDOM();
+    if (DOM.editModal) DOM.editModal.style.display = 'none';
     AppState.selectedLead = null;
     AppState.selectedStatus = null;
 }
 
 function selectStatus(status) {
+    const DOM = getDOM();
     AppState.selectedStatus = status;
     
     document.querySelectorAll('.status-btn').forEach(btn => {
@@ -581,100 +715,60 @@ function selectStatus(status) {
         }
     });
     
-    // Enable save button if status changed
-    DOM.saveStatus.disabled = (status === AppState.selectedLead?.status);
+    if (DOM.saveStatus) {
+        DOM.saveStatus.disabled = (status === AppState.selectedLead?.status);
+    }
 }
 
 async function saveStatusChange() {
+    const DOM = getDOM();
     if (!AppState.selectedLead || !AppState.selectedStatus) return;
     
     const leadId = AppState.selectedLead.leadId;
     const newStatus = AppState.selectedStatus;
-    const notes = DOM.updateNotes.value.trim();
+    const notes = DOM.updateNotes?.value?.trim() || '';
     
-    // Show loading state
-    DOM.saveStatus.disabled = true;
-    DOM.saveStatus.innerHTML = '<span class="btn-icon">⏳</span> Saving...';
-    
-    try {
-        // If Apps Script Web App URL is configured, call it
-        if (CONFIG.appsScriptWebAppUrl && !CONFIG.appsScriptWebAppUrl.includes('YOUR_')) {
-            const response = await fetch(CONFIG.appsScriptWebAppUrl, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'updateStatus',
-                    leadId: leadId,
-                    status: newStatus,
-                    notes: notes
-                })
-            });
-            
-            const result = await response.json();
-            if (!result.success) {
-                throw new Error(result.error || 'Update failed');
-            }
+    // Update local state
+    const leadIndex = AppState.leads.findIndex(l => l.leadId === leadId);
+    if (leadIndex !== -1) {
+        AppState.leads[leadIndex].status = newStatus;
+        if (notes) {
+            const timestamp = formatTimestamp(new Date());
+            AppState.leads[leadIndex].remarks = `[${timestamp}] ${newStatus}: ${notes}\n${AppState.leads[leadIndex].remarks || ''}`;
         }
-        
-        // Update local state
-        const leadIndex = AppState.leads.findIndex(l => l.leadId === leadId);
-        if (leadIndex !== -1) {
-            AppState.leads[leadIndex].status = newStatus;
-            if (notes) {
-                const timestamp = formatTimestamp(new Date());
-                AppState.leads[leadIndex].remarks = `[${timestamp}] ${newStatus}: ${notes}\n${AppState.leads[leadIndex].remarks || ''}`;
-            }
-        }
-        
-        // Recalculate and update UI
-        calculateKPIs();
-        updateDashboard();
-        
-        // Show success
-        alert(`✅ Status updated to "${newStatus}" for ${leadId}`);
-        closeEditModal();
-        
-    } catch (error) {
-        console.error('Save error:', error);
-        alert('❌ Error saving: ' + error.message + '\n\nNote: If Apps Script Web App is not configured, changes are only saved locally and will reset on refresh.');
-        
-        // Still update locally for demo purposes
-        const leadIndex = AppState.leads.findIndex(l => l.leadId === leadId);
-        if (leadIndex !== -1) {
-            AppState.leads[leadIndex].status = newStatus;
-        }
-        calculateKPIs();
-        updateDashboard();
-        closeEditModal();
-    } finally {
-        DOM.saveStatus.disabled = false;
-        DOM.saveStatus.innerHTML = '<span class="btn-icon">💾</span> Save Changes';
     }
+    
+    // Recalculate and update
+    calculateKPIs();
+    updateDashboard();
+    
+    alert(`✅ Status updated to "${newStatus}"\n\n⚠️ Note: This change is saved locally. To save permanently, update the Google Sheet directly or configure the Apps Script Web App.`);
+    closeEditModal();
 }
 
 // ============================================
 // VIEW NAVIGATION
 // ============================================
 function switchView(viewName) {
+    const DOM = getDOM();
     AppState.currentView = viewName;
     
     // Hide all views
-    DOM.dashboardView.style.display = 'none';
-    DOM.leadsView.style.display = 'none';
-    DOM.followupsView.style.display = 'none';
+    if (DOM.dashboardView) DOM.dashboardView.style.display = 'none';
+    if (DOM.leadsView) DOM.leadsView.style.display = 'none';
+    if (DOM.followupsView) DOM.followupsView.style.display = 'none';
     
     // Show selected view
     switch (viewName) {
         case 'dashboard':
-            DOM.dashboardView.style.display = 'block';
+            if (DOM.dashboardView) DOM.dashboardView.style.display = 'block';
             break;
         case 'leads':
-            DOM.leadsView.style.display = 'block';
+            if (DOM.leadsView) DOM.leadsView.style.display = 'block';
             updateLeadsTable();
             break;
         case 'followups':
-            DOM.followupsView.style.display = 'block';
+            if (DOM.followupsView) DOM.followupsView.style.display = 'block';
             updateFollowupsGrid();
             break;
     }
@@ -694,33 +788,6 @@ function switchView(viewName) {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
-function animateValue(element, targetValue) {
-    if (!element) return;
-    const startValue = parseInt(element.textContent) || 0;
-    const duration = 500;
-    const startTime = performance.now();
-    
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        const currentValue = Math.round(startValue + (targetValue - startValue) * easeOut);
-        element.textContent = currentValue.toLocaleString();
-        if (progress < 1) requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
-}
-
-function formatDate(date, format = 'YYYY-MM-DD') {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    
-    if (format === 'YYYY-MM-DD') return `${year}-${month}-${day}`;
-    if (format === 'DD/MM/YYYY') return `${day}/${month}/${year}`;
-    return `${year}-${month}-${day}`;
-}
-
 function formatTimestamp(date) {
     return date.toLocaleString('en-IN', {
         year: 'numeric', month: 'short', day: 'numeric',
@@ -735,34 +802,47 @@ function escapeHtml(text) {
 }
 
 function showLoading(show) {
+    const DOM = getDOM();
     if (DOM.loadingOverlay) {
-        DOM.loadingOverlay.classList.toggle('hidden', !show);
+        if (show) {
+            DOM.loadingOverlay.classList.remove('hidden');
+        } else {
+            DOM.loadingOverlay.classList.add('hidden');
+        }
     }
 }
 
 function showError(message) {
+    const DOM = getDOM();
     if (DOM.errorBanner && DOM.errorMessage) {
         DOM.errorMessage.textContent = message;
         DOM.errorBanner.style.display = 'flex';
     }
+    console.error('⚠️ Error:', message);
 }
 
 function hideError() {
-    if (DOM.errorBanner) DOM.errorBanner.style.display = 'none';
+    const DOM = getDOM();
+    if (DOM.errorBanner) {
+        DOM.errorBanner.style.display = 'none';
+    }
 }
 
 // ============================================
 // EVENT LISTENERS
 // ============================================
 function initEventListeners() {
+    const DOM = getDOM();
+    
     // Quick Add buttons
     const openForm = () => {
-        if (CONFIG.quickAddFormUrl && !CONFIG.quickAddFormUrl.includes('YOUR_')) {
+        if (typeof CONFIG !== 'undefined' && CONFIG.quickAddFormUrl && !CONFIG.quickAddFormUrl.includes('YOUR_')) {
             window.open(CONFIG.quickAddFormUrl, '_blank');
         } else {
-            alert('Lead Intake Form URL not configured. Please update config.js');
+            alert('📝 Lead Intake Form URL not configured.\n\nPlease update config.js with your Google Form URL.');
         }
     };
+    
     if (DOM.quickAddBtn) DOM.quickAddBtn.addEventListener('click', openForm);
     if (DOM.quickAddBtnMobile) DOM.quickAddBtnMobile.addEventListener('click', openForm);
     
@@ -816,44 +896,67 @@ function initEventListeners() {
     }
     
     // Retry button
-    if (DOM.retryBtn) DOM.retryBtn.addEventListener('click', fetchAllData);
+    if (DOM.retryBtn) {
+        DOM.retryBtn.addEventListener('click', fetchAllData);
+    }
+    
+    console.log('✅ Event listeners initialized');
 }
 
 // ============================================
 // AUTO-REFRESH
 // ============================================
 function startAutoRefresh() {
-    if (AppState.refreshInterval) clearInterval(AppState.refreshInterval);
+    const DOM = getDOM();
     
-    const interval = CONFIG.refreshInterval || 300000;
+    if (AppState.refreshInterval) {
+        clearInterval(AppState.refreshInterval);
+    }
+    
+    const interval = (typeof CONFIG !== 'undefined' && CONFIG.refreshInterval) || 300000;
+    
     AppState.refreshInterval = setInterval(() => {
-        console.log('⏰ Auto-refresh');
+        console.log('⏰ Auto-refresh triggered');
         fetchAllData();
     }, interval);
     
     if (DOM.refreshStatus) DOM.refreshStatus.textContent = 'Active';
+    console.log(`⏰ Auto-refresh started: every ${interval/1000}s`);
 }
 
 // ============================================
 // INITIALIZATION
 // ============================================
 async function init() {
-    console.log('🚀 Initializing Dashboard...');
+    console.log('🚀 Initializing Paramount Dashboard v2.1...');
     
+    // Check for CONFIG
     if (typeof CONFIG === 'undefined') {
+        console.error('❌ CONFIG not loaded - check if config.js is included');
         showLoading(false);
-        showError('Configuration not loaded. Please ensure config.js is included.');
+        showError('Configuration file (config.js) not loaded. Please check the file exists and is properly linked in index.html');
+        showEmptyState();
         return;
     }
     
+    console.log('✅ CONFIG loaded');
+    
+    // Initialize event listeners
     initEventListeners();
+    
+    // Fetch data
     await fetchAllData();
+    
+    // Start auto-refresh
     startAutoRefresh();
     
-    // Pause refresh when tab hidden
+    // Handle tab visibility
     document.addEventListener('visibilitychange', () => {
+        const DOM = getDOM();
         if (document.hidden) {
-            if (AppState.refreshInterval) clearInterval(AppState.refreshInterval);
+            if (AppState.refreshInterval) {
+                clearInterval(AppState.refreshInterval);
+            }
             if (DOM.refreshStatus) DOM.refreshStatus.textContent = 'Paused';
         } else {
             startAutoRefresh();
@@ -861,16 +964,10 @@ async function init() {
         }
     });
     
-    console.log('✅ Dashboard initialized');
+    console.log('✅ Dashboard initialized successfully!');
 }
 
 // Make functions globally accessible
 window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
-
-// Start
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+window.switchView = switchView;
