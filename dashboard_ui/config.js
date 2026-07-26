@@ -6,12 +6,12 @@
 const config = {
   // Published CSV of the Lead_Register sheet (Form Responses 1)
   leadRegisterCsvUrl:
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7Jqtg0yQMYBIoZ2LTV9jJLFGtnaxfjA0hGcqjVOSK-l3ZjOUv6eOUTIVeazQX_Ao_JmuzVz7-eVCX/pub?gid=1210441358&single=true&output=csv',
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7Jqtg0yQMYBIoZ2LTV9jJLFGtnaxfjA0hGcqjVOSK-l3ZjOUv6eOUTIVeazQX_Ao_JmuzVz7-eVCX/pub?gid=1329417763&single=true&output=csv',
 
   // Published CSV of the Followup_Tracker sheet
   // ⚠️ FIXED: was pubhtml (HTML page) — must be pub?output=csv
   followupTrackerCsvUrl:
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQBrIIkNmVzdoXgpK3xHiFPMFHSEDENI-rfwaPHQu01vEozHDpfYwT24YL25kwaIaiy_bi9hifrlm1e/pub?output=csv',
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7Jqtg0yQMYBIoZ2LTV9jJLFGtnaxfjA0hGcqjVOSK-l3ZjOUv6eOUTIVeazQX_Ao_JmuzVz7-eVCX/pub?gid=1256833982&single=true&output=csv',
 
   // "Quick Add Lead" button target (Lead Intake Google Form)
   quickAddFormUrl:
