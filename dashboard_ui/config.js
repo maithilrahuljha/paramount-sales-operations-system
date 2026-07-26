@@ -1,7 +1,7 @@
 const config = {
   // Published CSV of Lead_Register → Form Responses 1 tab → CSV format
   leadRegisterCsvUrl:
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7Jqtg0yQMYBIoZ2LTV9jJLFGtnaxfjA0hGcqjVOSK-l3ZjOUv6eOUTIVeazQX_Ao_JmuzVz7-eVCX/pub?gid=1329417763&single=true&output=csv',
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7Jqtg0yQMYBIoZ2LTV9jJLFGtnaxfjA0hGcqjVOSK-l3ZjOUv6eOUTIVeazQX_Ao_JmuzVz7-eVCX/pub?gid=712764299&single=true&output=csv',
 
   // Published CSV of Followup_Tracker tab → CSV format
   followupTrackerCsvUrl:
