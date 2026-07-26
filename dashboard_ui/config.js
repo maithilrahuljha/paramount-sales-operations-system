@@ -56,7 +56,9 @@ const CONFIG = {
      * Preferred Batch Month | Current Education Level | Counsellor Assigned | 
      * Additional Remarks | Status
      */
-    leadRegisterCsvUrl: 'YOUR_CSV_URL_HERE_FOR_LEAD_REGISTER',
+    leadRegisterCsvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7Jqtg0yQMYBIoZ2LTV9jJLFGtnaxfjA0hGcqjVOSK-l3ZjOUv6eOUTIVeazQX_Ao_JmuzVz7-eVCX/pub?gid=1329417763&single=true&output=csv
+
+',
     
     /**
      * Followup Tracker CSV URL
@@ -72,7 +74,7 @@ const CONFIG = {
      * Lead Intake Form URL
      * The shareable link to your Google Form for new lead capture
      */
-    quickAddFormUrl: 'YOUR_FORM_URL_HERE_FOR_LEAD_INTAKE',
+    quickAddFormUrl: 'https://docs.google.com/forms/d/1wrN-HyT5qxTBdgi9Y6x3GbttBzLQHtQaE5sLuYu0zC4/viewform',
     
     // ============================================
     // APPS SCRIPT WEB APP (Optional)
