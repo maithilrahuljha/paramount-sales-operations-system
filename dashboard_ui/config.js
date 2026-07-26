@@ -14,7 +14,7 @@ const config = {
   // ⚠️ APPS SCRIPT WEB APP URL — enables EDIT access from dashboard
   // Deploy Code.gs as Web App → paste URL here
   // Without this, dashboard is READ-ONLY
-  appsScriptUrl: 'https://script.google.com/a/macros/paramountmerchantnavy.com/s/AKfycbyb8EiRAPsUDRwNsAWjkUBx2-6DML9dG91oj6tAZrLam7rGUUCjftam1w8J9WP97lSgAQ/exec',
+  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbyb8EiRAPsUDRwNsAWjkUBx2-6DML9dG91oj6tAZrLam7rGUUCjftam1w8J9WP97lSgAQ/exec',
 
   refreshInterval: 300000,
 
