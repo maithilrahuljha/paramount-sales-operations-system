@@ -2,7 +2,12 @@ import { useEffect } from 'react'
 
 function App() {
   useEffect(() => {
-    window.location.href = './dashboard_ui/index.html'
+    // Get the current path base (works for any repo name)
+    // e.g. /paramount-sales-operations-system/ → redirect to dashboard_ui/ inside it
+    const pathParts = window.location.pathname.split('/').filter(Boolean)
+    // pathParts[0] is the repo name on GitHub Pages
+    const repoBase = pathParts.length > 0 ? '/' + pathParts[0] + '/' : '/'
+    window.location.href = repoBase + 'dashboard_ui/index.html'
   }, [])
 
   return (
