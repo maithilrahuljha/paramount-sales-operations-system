@@ -1,750 +1,367 @@
 /**
  * ============================================================================
- * PARAMOUNT MERCHANT NAVY - LEAD ID GENERATOR & FOLLOWUP SYNC
+ * PARAMOUNT MERCHANT NAVY — Apps Script API v4
  * ============================================================================
- * Purpose: 
- *   1. Auto-generates unique Lead IDs when new form submissions are received
- *   2. Sets initial status to "New Lead"
- *   3. Copies new lead to Followup_Tracker sheet for follow-up management
- * 
- * Format: PMN-YYYY-XXXX (e.g., PMN-2026-0001, PMN-2026-0002)
- * Author: Paramount Merchant Navy CRM System
- * Version: 2.0.0
- * ============================================================================
- * 
- * LEAD_REGISTER HEADERS (Form Responses 1):
- * -----------------------------------------
- * A: Lead_ID (auto-generated)
- * B: Candidate Full Name
- * C: Email Address
- * D: Phone Number
- * E: City / Location
- * F: Course Interested In
- * G: How did you hear about us?
- * H: Preferred Batch Month
- * I: Current Education Level
- * J: Counsellor Assigned
- * K: Additional Remarks
- * L: Status (auto-set to "New Lead")
- * 
- * STATUS WORKFLOW:
- * ----------------
- * New Lead → Contacted → Interested → Counselling Scheduled → 
- * Admission Pending → Enrolled / Completed / Lost
- * 
- * INSTALLATION INSTRUCTIONS:
- * --------------------------
- * 1. Open your Lead_Register Google Sheet
- * 2. Go to Extensions > Apps Script
- * 3. Delete any existing code in the editor
- * 4. Copy and paste this entire file content
- * 5. Click the disk icon (Save) or press Ctrl+S
- * 6. Name the project "Lead ID Generator"
- * 7. Click "Run" > "Run function" > "onFormSubmit" to authorize
- * 8. Click "Review Permissions" and allow access
- * 9. Go to "Triggers" (clock icon on left sidebar)
- * 10. Click "Add Trigger" button
- * 11. Configure:
- *     - Choose which function to run: onFormSubmit
- *     - Choose which deployment should run: Head
- *     - Select event source: From spreadsheet
- *     - Select event type: On form submit
- * 12. Click "Save"
- * 
+ *
+ * WHAT THIS DOES:
+ *   1. On form submit → generates Lead_ID, sets Status, copies to Followup_Tracker
+ *   2. Serves as a WEB APP API so the dashboard can UPDATE leads (two-way)
+ *   3. Archives Enrolled/Completed/Lost leads to monthly archive sheet
+ *
+ * DEPLOYMENT (one-time):
+ *   1. Open Lead_Register sheet → Extensions → Apps Script
+ *   2. Paste this code, Save
+ *   3. Click Deploy → New deployment
+ *   4. Type = "Web app"
+ *   5. Execute as = "Me"
+ *   6. Who has access = "Anyone"
+ *   7. Click Deploy → Copy the Web App URL
+ *   8. Paste that URL into dashboard_ui/config.js → appsScriptUrl
+ *
+ * TRIGGERS (set once):
+ *   Triggers → Add Trigger:
+ *     Function: onFormSubmit
+ *     Event source: From spreadsheet
+ *     Event type: On form submit
  * ============================================================================
  */
 
-// ============================================
-// CONFIGURATION
-// ============================================
+// ===================== CONFIG =====================
 
-const CONFIG = {
-  // Prefix for Lead IDs (Paramount Merchant Navy)
+const CFG = {
   PREFIX: 'PMN',
-  
-  // Column indices (1-based)
-  COLUMNS: {
-    LEAD_ID: 1,           // Column A
-    CANDIDATE_NAME: 2,    // Column B
-    EMAIL: 3,             // Column C
-    PHONE: 4,             // Column D
-    CITY: 5,              // Column E
-    COURSE: 6,            // Column F
-    SOURCE: 7,            // Column G
-    BATCH_MONTH: 8,       // Column H
-    EDUCATION: 9,         // Column I
-    COUNSELLOR: 10,       // Column J
-    REMARKS: 11,          // Column K
-    STATUS: 12            // Column L
-  },
-  
-  // Default status for new leads
-  DEFAULT_STATUS: 'New Lead',
-  
-  // Valid statuses
-  VALID_STATUSES: [
-    'New Lead',
-    'Contacted',
-    'Interested',
-    'Counselling Scheduled',
-    'Admission Pending',
-    'Enrolled',
-    'Completed',
-    'Lost'
-  ],
-  
-  // Followup Tracker sheet name
-  FOLLOWUP_SHEET_NAME: 'Followup_Tracker',
-  
-  // Timezone for date calculations
+  DIGITS: 4,
   TIMEZONE: 'Asia/Kolkata',
-  
-  // Number of digits for the sequential number (e.g., 4 = 0001)
-  NUMBER_DIGITS: 4
+  // Sheet tab names
+  FORM_SHEET: 'Form Responses 1',
+  FOLLOWUP_SHEET: 'Followup_Tracker',
+  // Column positions in Form Responses 1 (1-based)
+  COL: {
+    TIMESTAMP: 1,    // A — auto by Google Forms
+    LEAD_ID: 2,      // B
+    NAME: 3,         // C — Candidate Full Name
+    EMAIL: 4,        // D
+    PHONE: 5,        // E
+    CITY: 6,         // F
+    COURSE: 7,       // G
+    SOURCE: 8,       // H — How did you hear about us?
+    BATCH: 9,        // I
+    EDUCATION: 10,   // J
+    COUNSELLOR: 11,  // K
+    REMARKS: 12,     // L
+    STATUS: 13       // M
+  },
+  DEFAULT_STATUS: 'New Lead',
+  ARCHIVE_STATUSES: ['Enrolled', 'Completed', 'Lost'],
+  VALID_STATUSES: [
+    'New Lead', 'Contacted', 'Interested',
+    'Counselling Scheduled', 'Admission Pending',
+    'Enrolled', 'Completed', 'Lost'
+  ]
 };
 
-// ============================================
-// MAIN TRIGGER FUNCTION
-// ============================================
+// ===================== FORM SUBMIT TRIGGER =====================
 
-/**
- * Trigger function that runs when a form is submitted
- * This is the main entry point called by Google Sheets trigger
- * 
- * @param {Object} e - The event object from form submission
- */
 function onFormSubmit(e) {
   try {
-    Logger.log('📥 Form submission received');
-    
-    // Get the active spreadsheet
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getActiveSheet();
-    
-    // Get the range that was edited (the new row)
-    const range = e.range;
-    const row = range.getRow();
-    
-    Logger.log('📍 New row: ' + row);
-    
-    // Skip if it's the header row
-    if (row === 1) {
-      Logger.log('⏭️ Skipping header row');
-      return;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CFG.FORM_SHEET) || ss.getActiveSheet();
+    var row = e.range.getRow();
+    if (row <= 1) return;
+
+    // Generate Lead ID if empty
+    var idCell = sheet.getRange(row, CFG.COL.LEAD_ID);
+    if (!idCell.getValue()) {
+      var id = generateId(sheet);
+      idCell.setValue(id);
     }
-    
-    // Check if Lead ID already exists for this row
-    const existingLeadId = sheet.getRange(row, CONFIG.COLUMNS.LEAD_ID).getValue();
-    
-    if (existingLeadId && existingLeadId.toString().trim() !== '') {
-      Logger.log('⏭️ Lead ID already exists: ' + existingLeadId);
-      return;
+
+    // Set default status if empty
+    var statusCell = sheet.getRange(row, CFG.COL.STATUS);
+    if (!statusCell.getValue()) {
+      statusCell.setValue(CFG.DEFAULT_STATUS);
     }
-    
-    // Step 1: Generate new Lead ID
-    const newLeadId = generateLeadId(sheet);
-    sheet.getRange(row, CONFIG.COLUMNS.LEAD_ID).setValue(newLeadId);
-    Logger.log('✅ Lead ID generated: ' + newLeadId);
-    
-    // Step 2: Set default status to "New Lead"
-    const currentStatus = sheet.getRange(row, CONFIG.COLUMNS.STATUS).getValue();
-    if (!currentStatus || currentStatus.toString().trim() === '') {
-      sheet.getRange(row, CONFIG.COLUMNS.STATUS).setValue(CONFIG.DEFAULT_STATUS);
-      Logger.log('✅ Status set to: ' + CONFIG.DEFAULT_STATUS);
-    }
-    
-    // Step 3: Copy to Followup Tracker
-    copyToFollowupTracker(ss, sheet, row, newLeadId);
-    
-    Logger.log('✅ Form submission processed successfully!');
-    
-  } catch (error) {
-    Logger.log('❌ Error in onFormSubmit: ' + error.toString());
-    // Don't throw error to prevent form submission failure
+
+    // Copy to Followup_Tracker
+    syncToFollowup(ss, sheet, row);
+
+  } catch (err) {
+    Logger.log('onFormSubmit error: ' + err);
   }
 }
 
-// ============================================
-// LEAD ID GENERATION
-// ============================================
+function generateId(sheet) {
+  var year = Utilities.formatDate(new Date(), CFG.TIMEZONE, 'yyyy');
+  var prefix = CFG.PREFIX + '-' + year + '-';
+  var last = sheet.getLastRow();
+  var max = 0;
 
-/**
- * Generate a unique Lead ID in format: PMN-YYYY-XXXX
- * 
- * @param {Sheet} sheet - The active sheet
- * @returns {string} The generated Lead ID
- */
-function generateLeadId(sheet) {
-  // Get current year in IST timezone
-  const now = new Date();
-  const year = Utilities.formatDate(now, CONFIG.TIMEZONE, 'yyyy');
-  
-  // Get the last Lead ID with this year's prefix
-  const lastNumber = getLastLeadNumber(sheet, year);
-  
-  // Increment the number
-  const newNumber = lastNumber + 1;
-  
-  // Format the number with leading zeros
-  const formattedNumber = padNumber(newNumber, CONFIG.NUMBER_DIGITS);
-  
-  // Construct the Lead ID
-  const leadId = `${CONFIG.PREFIX}-${year}-${formattedNumber}`;
-  
-  return leadId;
-}
-
-/**
- * Get the last sequential number used for a given year
- * 
- * @param {Sheet} sheet - The active sheet
- * @param {string} year - The year to search for
- * @returns {number} The last used number, or 0 if none found
- */
-function getLastLeadNumber(sheet, year) {
-  const lastRow = sheet.getLastRow();
-  
-  if (lastRow <= 1) {
-    return 0;
-  }
-  
-  const leadIdRange = sheet.getRange(2, CONFIG.COLUMNS.LEAD_ID, lastRow - 1, 1);
-  const leadIds = leadIdRange.getValues();
-  
-  let maxNumber = 0;
-  const yearPrefix = `${CONFIG.PREFIX}-${year}-`;
-  
-  for (let i = 0; i < leadIds.length; i++) {
-    const leadId = leadIds[i][0].toString().trim();
-    
-    if (leadId.startsWith(yearPrefix)) {
-      const numberPart = leadId.substring(yearPrefix.length);
-      const number = parseInt(numberPart, 10);
-      
-      if (!isNaN(number) && number > maxNumber) {
-        maxNumber = number;
+  if (last > 1) {
+    var ids = sheet.getRange(2, CFG.COL.LEAD_ID, last - 1, 1).getValues();
+    ids.forEach(function(r) {
+      var v = String(r[0]);
+      if (v.indexOf(prefix) === 0) {
+        var n = parseInt(v.substring(prefix.length), 10);
+        if (n > max) max = n;
       }
-    }
+    });
   }
-  
-  Logger.log('📊 Last number for ' + year + ': ' + maxNumber);
-  return maxNumber;
+
+  var next = max + 1;
+  var padded = String(next);
+  while (padded.length < CFG.DIGITS) padded = '0' + padded;
+  return prefix + padded;
 }
 
-/**
- * Pad a number with leading zeros
- */
-function padNumber(num, digits) {
-  let str = num.toString();
-  while (str.length < digits) {
-    str = '0' + str;
-  }
-  return str;
-}
-
-// ============================================
-// FOLLOWUP TRACKER SYNC
-// ============================================
-
-/**
- * Copy new lead to Followup Tracker sheet
- * 
- * @param {Spreadsheet} ss - The spreadsheet
- * @param {Sheet} sourceSheet - The Lead Register sheet
- * @param {number} row - The row number of the new lead
- * @param {string} leadId - The generated Lead ID
- */
-function copyToFollowupTracker(ss, sourceSheet, row, leadId) {
+function syncToFollowup(ss, formSheet, row) {
   try {
-    // Get or create Followup_Tracker sheet
-    let followupSheet = ss.getSheetByName(CONFIG.FOLLOWUP_SHEET_NAME);
-    
-    if (!followupSheet) {
-      // Create the Followup_Tracker sheet if it doesn't exist
-      followupSheet = ss.insertSheet(CONFIG.FOLLOWUP_SHEET_NAME);
-      
-      // Add headers
-      const headers = [
-        'Lead_ID',
-        'Candidate Full Name',
-        'Phone Number',
-        'Email Address',
-        'Course Interested In',
-        'Counsellor Assigned',
-        'Status',
-        'Last Contact Date',
-        'Next Followup Date',
-        'Priority',
-        'Followup Notes',
-        'Created Date'
-      ];
-      followupSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-      
-      // Format header row
-      followupSheet.getRange(1, 1, 1, headers.length)
-        .setBackground('#1a237e')
-        .setFontColor('#ffffff')
-        .setFontWeight('bold');
-      
-      Logger.log('📋 Created Followup_Tracker sheet');
+    var fu = ss.getSheetByName(CFG.FOLLOWUP_SHEET);
+    if (!fu) {
+      fu = ss.insertSheet(CFG.FOLLOWUP_SHEET);
+      fu.getRange(1, 1, 1, 10).setValues([[
+        'Lead_ID', 'Candidate Full Name', 'Phone Number', 'Course Interested In',
+        'Counsellor Assigned', 'Status', 'Last Contact Date',
+        'Next Followup Date', 'Priority', 'Notes'
+      ]]);
+      fu.getRange(1, 1, 1, 10).setBackground('#1a237e').setFontColor('#fff').setFontWeight('bold');
     }
-    
-    // Get data from source row
-    const candidateName = sourceSheet.getRange(row, CONFIG.COLUMNS.CANDIDATE_NAME).getValue();
-    const phone = sourceSheet.getRange(row, CONFIG.COLUMNS.PHONE).getValue();
-    const email = sourceSheet.getRange(row, CONFIG.COLUMNS.EMAIL).getValue();
-    const course = sourceSheet.getRange(row, CONFIG.COLUMNS.COURSE).getValue();
-    const counsellor = sourceSheet.getRange(row, CONFIG.COLUMNS.COUNSELLOR).getValue();
-    const status = CONFIG.DEFAULT_STATUS;
-    
-    // Calculate next followup date (tomorrow)
-    const today = new Date();
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-    const nextFollowup = Utilities.formatDate(tomorrow, CONFIG.TIMEZONE, 'yyyy-MM-dd');
-    const createdDate = Utilities.formatDate(today, CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
-    
-    // Prepare row data for Followup Tracker
-    const followupData = [
-      leadId,                    // Lead_ID
-      candidateName,             // Candidate Full Name
-      phone,                     // Phone Number
-      email,                     // Email Address
-      course,                    // Course Interested In
-      counsellor,                // Counsellor Assigned
-      status,                    // Status
-      '',                        // Last Contact Date (empty initially)
-      nextFollowup,              // Next Followup Date
-      'P2',                      // Priority (default P2 - new leads)
-      'New lead - Initial contact required',  // Followup Notes
-      createdDate                // Created Date
-    ];
-    
-    // Append to Followup Tracker
-    followupSheet.appendRow(followupData);
-    
-    Logger.log('✅ Lead copied to Followup_Tracker: ' + leadId);
-    
-  } catch (error) {
-    Logger.log('⚠️ Error copying to Followup Tracker: ' + error.toString());
-    // Don't throw - this shouldn't block the main process
+
+    var data = formSheet.getRange(row, 1, 1, 13).getValues()[0];
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    fu.appendRow([
+      data[CFG.COL.LEAD_ID - 1],     // Lead_ID
+      data[CFG.COL.NAME - 1],        // Name
+      data[CFG.COL.PHONE - 1],       // Phone
+      data[CFG.COL.COURSE - 1],      // Course
+      data[CFG.COL.COUNSELLOR - 1],  // Counsellor
+      data[CFG.COL.STATUS - 1] || CFG.DEFAULT_STATUS, // Status
+      '',                             // Last Contact Date
+      Utilities.formatDate(tomorrow, CFG.TIMEZONE, 'yyyy-MM-dd'), // Next Followup
+      'P2',                           // Priority
+      'New lead — initial contact required'  // Notes
+    ]);
+  } catch (err) {
+    Logger.log('syncToFollowup error: ' + err);
   }
 }
 
-// ============================================
-// STATUS UPDATE FUNCTION (for Dashboard use)
-// ============================================
+// ===================== WEB APP API =====================
 
-/**
- * Update lead status by Lead ID
- * This function can be called from the Dashboard via Apps Script Web App
- * 
- * @param {string} leadId - The Lead ID to update
- * @param {string} newStatus - The new status
- * @param {string} notes - Optional notes
- * @returns {Object} Result object
- */
-function updateLeadStatus(leadId, newStatus, notes) {
-  try {
-    // Validate status
-    if (!CONFIG.VALID_STATUSES.includes(newStatus)) {
-      return {
-        success: false,
-        error: 'Invalid status: ' + newStatus
-      };
-    }
-    
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getActiveSheet();
-    
-    // Find the row with this Lead ID
-    const lastRow = sheet.getLastRow();
-    const leadIdRange = sheet.getRange(2, CONFIG.COLUMNS.LEAD_ID, lastRow - 1, 1);
-    const leadIds = leadIdRange.getValues();
-    
-    let targetRow = -1;
-    for (let i = 0; i < leadIds.length; i++) {
-      if (leadIds[i][0].toString().trim() === leadId) {
-        targetRow = i + 2; // +2 for header and 0-indexing
-        break;
-      }
-    }
-    
-    if (targetRow === -1) {
-      return {
-        success: false,
-        error: 'Lead ID not found: ' + leadId
-      };
-    }
-    
-    // Update status
-    sheet.getRange(targetRow, CONFIG.COLUMNS.STATUS).setValue(newStatus);
-    
-    // Update remarks if notes provided
-    if (notes) {
-      const existingRemarks = sheet.getRange(targetRow, CONFIG.COLUMNS.REMARKS).getValue();
-      const timestamp = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm');
-      const newRemarks = `[${timestamp}] ${newStatus}: ${notes}\n${existingRemarks}`;
-      sheet.getRange(targetRow, CONFIG.COLUMNS.REMARKS).setValue(newRemarks);
-    }
-    
-    // Also update Followup Tracker
-    updateFollowupTrackerStatus(ss, leadId, newStatus, notes);
-    
-    Logger.log('✅ Status updated for ' + leadId + ' to ' + newStatus);
-    
-    return {
-      success: true,
-      leadId: leadId,
-      newStatus: newStatus
-    };
-    
-  } catch (error) {
-    Logger.log('❌ Error updating status: ' + error.toString());
-    return {
-      success: false,
-      error: error.toString()
-    };
-  }
-}
-
-/**
- * Update status in Followup Tracker
- */
-function updateFollowupTrackerStatus(ss, leadId, newStatus, notes) {
-  try {
-    const followupSheet = ss.getSheetByName(CONFIG.FOLLOWUP_SHEET_NAME);
-    if (!followupSheet) return;
-    
-    const lastRow = followupSheet.getLastRow();
-    if (lastRow <= 1) return;
-    
-    const leadIdRange = followupSheet.getRange(2, 1, lastRow - 1, 1);
-    const leadIds = leadIdRange.getValues();
-    
-    for (let i = 0; i < leadIds.length; i++) {
-      if (leadIds[i][0].toString().trim() === leadId) {
-        const targetRow = i + 2;
-        
-        // Update status (column 7)
-        followupSheet.getRange(targetRow, 7).setValue(newStatus);
-        
-        // Update last contact date (column 8)
-        const today = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
-        followupSheet.getRange(targetRow, 8).setValue(today);
-        
-        // Update priority based on status
-        let priority = 'P2';
-        if (newStatus === 'Interested' || newStatus === 'Counselling Scheduled') {
-          priority = 'P1';
-        } else if (newStatus === 'Enrolled' || newStatus === 'Completed' || newStatus === 'Lost') {
-          priority = 'P3';
-        }
-        followupSheet.getRange(targetRow, 10).setValue(priority);
-        
-        // Update notes if provided (column 11)
-        if (notes) {
-          const timestamp = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm');
-          const existingNotes = followupSheet.getRange(targetRow, 11).getValue();
-          const newNotes = `[${timestamp}] ${notes}\n${existingNotes}`;
-          followupSheet.getRange(targetRow, 11).setValue(newNotes);
-        }
-        
-        break;
-      }
-    }
-    
-    Logger.log('✅ Followup Tracker updated for ' + leadId);
-    
-  } catch (error) {
-    Logger.log('⚠️ Error updating Followup Tracker: ' + error.toString());
-  }
-}
-
-// ============================================
-// WEB APP FUNCTIONS (for Dashboard API)
-// ============================================
-
-/**
- * Handle GET requests (for fetching data)
- */
 function doGet(e) {
-  const action = e.parameter.action;
-  
-  let result;
-  
-  switch (action) {
-    case 'getLeads':
-      result = getAllLeads();
-      break;
-    case 'getFollowups':
-      result = getAllFollowups();
-      break;
-    case 'getLead':
-      result = getLeadById(e.parameter.leadId);
-      break;
-    default:
-      result = { error: 'Unknown action' };
-  }
-  
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
+  return handleRequest(e);
 }
 
-/**
- * Handle POST requests (for updating data)
- */
 function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  var action = (e.parameter && e.parameter.action) || '';
+  var result;
+
   try {
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
-    
-    let result;
-    
     switch (action) {
-      case 'updateStatus':
-        result = updateLeadStatus(data.leadId, data.status, data.notes);
+      case 'getLeads':
+        result = apiGetLeads();
+        break;
+      case 'updateLead':
+        result = apiUpdateLead(e.parameter);
+        break;
+      case 'archiveLead':
+        result = apiArchiveLead(e.parameter);
         break;
       default:
-        result = { error: 'Unknown action' };
+        result = { error: 'Unknown action: ' + action };
     }
-    
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    result = { error: String(err) };
   }
+
+  var output = ContentService.createTextOutput(JSON.stringify(result));
+  output.setMimeType(ContentService.MimeType.JSON);
+  return output;
 }
 
-/**
- * Get all leads from Lead Register
- */
-function getAllLeads() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getActiveSheet();
-  
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) {
-    return { leads: [] };
-  }
-  
-  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
-  
-  const leads = data.map(row => ({
-    leadId: row[0],
-    candidateName: row[1],
-    email: row[2],
-    phone: row[3],
-    city: row[4],
-    course: row[5],
-    source: row[6],
-    batchMonth: row[7],
-    education: row[8],
-    counsellor: row[9],
-    remarks: row[10],
-    status: row[11]
-  }));
-  
+// ---- GET ALL LEADS ----
+
+function apiGetLeads() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CFG.FORM_SHEET) || ss.getActiveSheet();
+  var last = sheet.getLastRow();
+  if (last <= 1) return { leads: [] };
+
+  var data = sheet.getRange(2, 1, last - 1, 13).getValues();
+  var leads = data.map(function(r) {
+    return {
+      timestamp:  r[0],
+      leadId:     r[1],
+      name:       r[2],
+      email:      r[3],
+      phone:      r[4],
+      city:       r[5],
+      course:     r[6],
+      source:     r[7],
+      batch:      r[8],
+      education:  r[9],
+      counsellor: r[10],
+      remarks:    r[11],
+      status:     r[12] || CFG.DEFAULT_STATUS
+    };
+  });
+
   return { leads: leads };
 }
 
-/**
- * Get all followups
- */
-function getAllFollowups() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const followupSheet = ss.getSheetByName(CONFIG.FOLLOWUP_SHEET_NAME);
-  
-  if (!followupSheet) {
-    return { followups: [] };
+// ---- UPDATE LEAD STATUS / REMARKS ----
+
+function apiUpdateLead(params) {
+  var leadId   = params.leadId;
+  var newStatus = params.status;
+  var notes     = params.notes || '';
+
+  if (!leadId) return { error: 'Missing leadId' };
+  if (newStatus && CFG.VALID_STATUSES.indexOf(newStatus) === -1) {
+    return { error: 'Invalid status: ' + newStatus };
   }
-  
-  const lastRow = followupSheet.getLastRow();
-  if (lastRow <= 1) {
-    return { followups: [] };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CFG.FORM_SHEET) || ss.getActiveSheet();
+  var last = sheet.getLastRow();
+  if (last <= 1) return { error: 'No data' };
+
+  var ids = sheet.getRange(2, CFG.COL.LEAD_ID, last - 1, 1).getValues();
+  var targetRow = -1;
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).trim() === leadId) {
+      targetRow = i + 2;
+      break;
+    }
   }
-  
-  const data = followupSheet.getRange(2, 1, lastRow - 1, 12).getValues();
-  
-  const followups = data.map(row => ({
-    leadId: row[0],
-    candidateName: row[1],
-    phone: row[2],
-    email: row[3],
-    course: row[4],
-    counsellor: row[5],
-    status: row[6],
-    lastContactDate: row[7],
-    nextFollowupDate: row[8],
-    priority: row[9],
-    notes: row[10],
-    createdDate: row[11]
-  }));
-  
-  return { followups: followups };
+
+  if (targetRow === -1) return { error: 'Lead not found: ' + leadId };
+
+  var ts = Utilities.formatDate(new Date(), CFG.TIMEZONE, 'yyyy-MM-dd HH:mm');
+
+  // Update status
+  if (newStatus) {
+    sheet.getRange(targetRow, CFG.COL.STATUS).setValue(newStatus);
+  }
+
+  // Append notes to remarks
+  if (notes) {
+    var existing = sheet.getRange(targetRow, CFG.COL.REMARKS).getValue() || '';
+    var updated = '[' + ts + '] ' + (newStatus || '') + ': ' + notes + '\n' + existing;
+    sheet.getRange(targetRow, CFG.COL.REMARKS).setValue(updated);
+  }
+
+  // Also update Followup_Tracker
+  updateFollowupStatus(ss, leadId, newStatus, notes, ts);
+
+  // If status is archive-worthy, auto-archive
+  if (newStatus && CFG.ARCHIVE_STATUSES.indexOf(newStatus) !== -1) {
+    archiveRow(ss, sheet, targetRow, newStatus);
+  }
+
+  return { success: true, leadId: leadId, status: newStatus };
 }
 
-/**
- * Get a specific lead by ID
- */
-function getLeadById(leadId) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getActiveSheet();
-  
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) {
-    return { error: 'No data found' };
-  }
-  
-  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
-  
-  for (let i = 0; i < data.length; i++) {
-    if (data[i][0] === leadId) {
-      return {
-        lead: {
-          leadId: data[i][0],
-          candidateName: data[i][1],
-          email: data[i][2],
-          phone: data[i][3],
-          city: data[i][4],
-          course: data[i][5],
-          source: data[i][6],
-          batchMonth: data[i][7],
-          education: data[i][8],
-          counsellor: data[i][9],
-          remarks: data[i][10],
-          status: data[i][11]
+function updateFollowupStatus(ss, leadId, newStatus, notes, ts) {
+  try {
+    var fu = ss.getSheetByName(CFG.FOLLOWUP_SHEET);
+    if (!fu) return;
+    var last = fu.getLastRow();
+    if (last <= 1) return;
+
+    var ids = fu.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]).trim() === leadId) {
+        var r = i + 2;
+        if (newStatus) fu.getRange(r, 6).setValue(newStatus);  // Status col
+        fu.getRange(r, 7).setValue(ts.split(' ')[0]);          // Last Contact Date
+
+        // Set priority based on status
+        var p = 'P2';
+        if (['Interested', 'Counselling Scheduled', 'Admission Pending'].indexOf(newStatus) !== -1) p = 'P1';
+        if (CFG.ARCHIVE_STATUSES.indexOf(newStatus) !== -1) p = 'P3';
+        fu.getRange(r, 9).setValue(p);
+
+        if (notes) {
+          var old = fu.getRange(r, 10).getValue() || '';
+          fu.getRange(r, 10).setValue('[' + ts + '] ' + notes + '\n' + old);
         }
-      };
+        break;
+      }
     }
-  }
-  
-  return { error: 'Lead not found' };
-}
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-/**
- * Initialize headers if they don't exist
- */
-function initializeHeaders() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getActiveSheet();
-  
-  const headers = [
-    'Lead_ID',
-    'Candidate Full Name',
-    'Email Address',
-    'Phone Number',
-    'City / Location',
-    'Course Interested In',
-    'How did you hear about us?',
-    'Preferred Batch Month',
-    'Current Education Level',
-    'Counsellor Assigned',
-    'Additional Remarks',
-    'Status'
-  ];
-  
-  const firstRow = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-  const hasHeaders = firstRow.some(cell => cell !== '');
-  
-  if (!hasHeaders) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length)
-      .setBackground('#1a237e')
-      .setFontColor('#ffffff')
-      .setFontWeight('bold');
-    Logger.log('✅ Headers initialized');
+  } catch (err) {
+    Logger.log('updateFollowupStatus error: ' + err);
   }
 }
 
-/**
- * Backfill Lead IDs for existing rows
- */
-function backfillLeadIds() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getActiveSheet();
-  const lastRow = sheet.getLastRow();
-  
-  if (lastRow <= 1) {
-    SpreadsheetApp.getUi().alert('No data rows to process');
-    return;
-  }
-  
-  let generatedCount = 0;
-  let statusCount = 0;
-  
-  for (let row = 2; row <= lastRow; row++) {
-    // Generate Lead ID if missing
-    const existingId = sheet.getRange(row, CONFIG.COLUMNS.LEAD_ID).getValue();
-    if (!existingId || existingId.toString().trim() === '') {
-      const newId = generateLeadId(sheet);
-      sheet.getRange(row, CONFIG.COLUMNS.LEAD_ID).setValue(newId);
-      generatedCount++;
-      
-      // Also copy to Followup Tracker
-      copyToFollowupTracker(ss, sheet, row, newId);
+// ---- ARCHIVE ----
+
+function archiveRow(ss, formSheet, row, reason) {
+  try {
+    var monthTag = Utilities.formatDate(new Date(), CFG.TIMEZONE, 'yyyy_MM');
+    var archName = 'Archived_' + monthTag;
+    var arch = ss.getSheetByName(archName);
+    if (!arch) {
+      arch = ss.insertSheet(archName);
+      var headers = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
+      headers.push('Archived_Date', 'Archive_Reason');
+      arch.getRange(1, 1, 1, headers.length).setValues([headers]);
+      arch.getRange(1, 1, 1, headers.length).setBackground('#1a237e').setFontColor('#fff').setFontWeight('bold');
     }
-    
-    // Set status if missing
-    const existingStatus = sheet.getRange(row, CONFIG.COLUMNS.STATUS).getValue();
-    if (!existingStatus || existingStatus.toString().trim() === '') {
-      sheet.getRange(row, CONFIG.COLUMNS.STATUS).setValue(CONFIG.DEFAULT_STATUS);
-      statusCount++;
-    }
+
+    var rowData = formSheet.getRange(row, 1, 1, formSheet.getLastColumn()).getValues()[0];
+    var ts = Utilities.formatDate(new Date(), CFG.TIMEZONE, 'yyyy-MM-dd HH:mm');
+    rowData.push(ts, reason);
+    arch.appendRow(rowData);
+
+    // Delete from main sheet
+    formSheet.deleteRow(row);
+    Logger.log('Archived ' + rowData[1] + ' → ' + archName);
+  } catch (err) {
+    Logger.log('archiveRow error: ' + err);
   }
-  
-  SpreadsheetApp.getUi().alert(
-    'Backfill Complete!\n\n' +
-    'Lead IDs generated: ' + generatedCount + '\n' +
-    'Statuses set: ' + statusCount
-  );
 }
 
-/**
- * Test function
- */
-function testLeadIdGeneration() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getActiveSheet();
-  const testId = generateLeadId(sheet);
-  SpreadsheetApp.getUi().alert('Test Lead ID: ' + testId);
+function apiArchiveLead(params) {
+  return apiUpdateLead(params); // archive happens automatically via status change
 }
 
-// ============================================
-// MENU
-// ============================================
+// ===================== MENU =====================
 
 function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🏢 Paramount CRM')
-    .addItem('🔧 Initialize Headers', 'initializeHeaders')
-    .addItem('🔄 Backfill Lead IDs & Sync Followups', 'backfillLeadIds')
-    .addItem('🧪 Test Lead ID Generation', 'testLeadIdGeneration')
-    .addSeparator()
-    .addItem('ℹ️ About', 'showAbout')
+  SpreadsheetApp.getUi().createMenu('🏢 Paramount CRM')
+    .addItem('🔄 Backfill Lead IDs', 'backfillIds')
+    .addItem('🧪 Test ID Generation', 'testId')
     .addToUi();
 }
 
-function showAbout() {
-  SpreadsheetApp.getUi().alert(
-    '🏢 Paramount Merchant Navy CRM\n\n' +
-    'Lead Management System v2.0.0\n\n' +
-    'Features:\n' +
-    '• Auto Lead ID generation (PMN-YYYY-XXXX)\n' +
-    '• Auto status setting (New Lead)\n' +
-    '• Auto sync to Followup_Tracker\n' +
-    '• Status workflow management\n\n' +
-    'Status Flow:\n' +
-    'New Lead → Contacted → Interested →\n' +
-    'Counselling Scheduled → Admission Pending →\n' +
-    'Enrolled / Completed / Lost'
-  );
+function backfillIds() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CFG.FORM_SHEET) || ss.getActiveSheet();
+  var last = sheet.getLastRow();
+  var count = 0;
+
+  for (var r = 2; r <= last; r++) {
+    if (!sheet.getRange(r, CFG.COL.LEAD_ID).getValue()) {
+      sheet.getRange(r, CFG.COL.LEAD_ID).setValue(generateId(sheet));
+      count++;
+    }
+    if (!sheet.getRange(r, CFG.COL.STATUS).getValue()) {
+      sheet.getRange(r, CFG.COL.STATUS).setValue(CFG.DEFAULT_STATUS);
+    }
+    syncToFollowup(ss, sheet, r);
+  }
+
+  SpreadsheetApp.getUi().alert('Done! Backfilled ' + count + ' Lead IDs and synced Followup_Tracker.');
+}
+
+function testId() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CFG.FORM_SHEET) || ss.getActiveSheet();
+  SpreadsheetApp.getUi().alert('Next ID would be: ' + generateId(sheet));
 }
