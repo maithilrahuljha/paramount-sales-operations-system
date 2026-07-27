@@ -14,7 +14,7 @@ const config = {
   // ⚠️ APPS SCRIPT WEB APP URL — enables EDIT access from dashboard
   // Deploy Code.gs as Web App → paste URL here
   // Without this, dashboard is READ-ONLY
-  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbyXzdt-mb_PeF77bshrFb1z314cp_7YZdOozI4HqCmn/dev',
+  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbyb8EiRAPsUDRwNsAWjkUBx2-6DML9dG91oj6tAZrLam7rGUUCjftam1w8J9WP97lSgAQ/exec',
 
   refreshInterval: 300000,
 
