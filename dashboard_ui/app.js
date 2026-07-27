@@ -1,12 +1,16 @@
 /**
- * app.js — Paramount Merchant Navy Dashboard v9
+ * app.js — Paramount Merchant Navy Dashboard v10
  *
  * DATA SOURCE HIERARCHY:
- *   1. Apps Script API (getLeads) → reads ALL tabs, returns combined data
- *   2. Published CSV (fallback) → reads only Form Responses 1 tab
+ *   1. Apps Script API (getLeads) → reads MAIN sheet only (source of truth)
+ *   2. Published CSV (fallback) → reads same main sheet tab
  *
- * When API is configured, KPIs are accurate because data comes from
- * all tabs (main + followup + archives). CSV alone only sees one tab.
+ * IMPORTANT:
+ *   - Main sheet keeps ALL leads forever now (active + enrolled + completed + lost)
+ *   - Followup_Tracker is operational/support only
+ *   - Archived_YYYY_MM is backup/history only
+ *
+ * Reading all tabs caused duplicate/stale rows and wrong KPI values.
  */
 
 /* ===================== CSV PARSER ===================== */
@@ -123,10 +127,11 @@ function mapLead(r) {
 }
 
 async function fetchFromApi() {
-  console.log('📡 Fetching from Apps Script API (all tabs)…');
+  console.log('📡 Fetching from Apps Script API (main sheet source of truth)…');
   var result = await readFromAppsScript({ action: 'getLeads' });
   if (result && result.leads) {
-    console.log('✅ API returned', result.leads.length, 'leads from tabs:', (result.tabs||[]).join(', '));
+    console.log('✅ API returned', result.leads.length, 'leads from tab:', result.tab || 'main');
+    if (result.note) console.log('📋 Note:', result.note);
     return result.leads.map(mapLead);
   }
   throw new Error('API returned no leads data');
@@ -154,11 +159,11 @@ async function refresh() {
     if (hasApi()) {
       try {
         allLeads = await fetchFromApi();
-        console.log('✅ Using API data:', allLeads.length, 'total leads (all tabs)');
+        console.log('✅ Using API data:', allLeads.length, 'total leads (main sheet)');
       } catch (apiErr) {
         console.warn('⚠️ API failed, falling back to CSV:', apiErr.message);
         allLeads = await fetchFromCsv();
-        showBanner('⚠️ Using CSV data only (API unavailable) — archived leads may not show in KPIs');
+        showBanner('⚠️ Using CSV fallback — same main-sheet data, but edit verification may lag', false);
       }
     } else {
       // FALLBACK: CSV only (only sees Form Responses 1 tab)
@@ -225,13 +230,23 @@ function renderLeadsTable(){
   if(!filtered.length){$('leadsBody').innerHTML='<tr><td colspan="7" class="muted">No matching leads</td></tr>';return;}
   $('leadsBody').innerHTML=filtered.map(function(l){
     var stCls=ARCHIVE.indexOf(l.status)!==-1?(l.status==='Lost'?'badge-lost':'badge-closed'):'badge-open';
-    var editId=l.leadId||l.name||'unknown';
-    return'<tr><td style="font-family:monospace;font-weight:600;color:var(--navy)">'+esc(l.leadId||'—')+'</td><td>'+esc(l.name)+'</td><td><a href="tel:'+esc(l.phone)+'" class="phone-link" onclick="event.stopPropagation()">'+esc(l.phone||'—')+'</a></td><td>'+esc(l.course)+'</td><td>'+esc(l.counsellor||'—')+'</td><td><span class="badge '+stCls+'">'+esc(l.status)+'</span></td><td><button class="edit-btn" onclick="openModal(\''+esc(editId)+'\')">✏️</button></td></tr>';
+    var editId=encodeURIComponent(l.leadId||l.name||'unknown');
+    var row='<tr>';
+    row+='<td style="font-family:monospace;font-weight:600;color:var(--navy)">'+esc(l.leadId||'—')+'</td>';
+    row+='<td>'+esc(l.name)+'</td>';
+    row+='<td><a href="tel:'+esc(l.phone)+'" class="phone-link" onclick="event.stopPropagation()">'+esc(l.phone||'—')+'</a></td>';
+    row+='<td>'+esc(l.course)+'</td>';
+    row+='<td>'+esc(l.counsellor||'—')+'</td>';
+    row+='<td><span class="badge '+stCls+'">'+esc(l.status)+'</span></td>';
+    row+='<td><button class="edit-btn" onclick="openModal(&quot;'+editId+'&quot;)">✏️</button></td>';
+    row+='</tr>';
+    return row;
   }).join('');
 }
 
 /* ===================== MODAL ===================== */
-function openModal(leadId){
+function openModal(encodedLeadId){
+  var leadId=decodeURIComponent(encodedLeadId||'');
   var lead=allLeads.find(function(l){return l.leadId===leadId;})||allLeads.find(function(l){return l.name===leadId;});
   if(!lead){alert('Lead not found: '+leadId);return;}
   selectedLead=lead;selectedStatus=null;
