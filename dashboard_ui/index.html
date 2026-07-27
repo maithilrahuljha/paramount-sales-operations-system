@@ -108,6 +108,16 @@
         <button class="modal-close" onclick="closeModal()">×</button>
       </div>
       <div class="modal-body">
+        <!-- API not configured warning -->
+        <div id="mApiWarning" class="modal-warning" style="display:none;">
+          <strong>⚠️ Edit access not configured</strong><br>
+          To enable editing, deploy the Apps Script Web App:<br>
+          1. Lead_Register → Extensions → Apps Script<br>
+          2. Deploy → New deployment → Web app → Anyone<br>
+          3. Copy URL → paste in config.js → appsScriptUrl<br>
+          <a href="https://github.com/maithilrahuljha/paramount-sales-operations-system/blob/main/changesmade.txt" target="_blank" style="color:#1a237e;font-weight:600;">📖 Full setup guide</a>
+        </div>
+
         <!-- Lead info -->
         <div class="lead-info">
           <div class="info-row"><span class="info-label">👤 Name</span><span id="mName">—</span></div>
@@ -119,24 +129,25 @@
           <div class="info-row"><span class="info-label">📊 Current</span><span id="mCurrentStatus" class="badge badge-open">—</span></div>
         </div>
 
-        <!-- Status change -->
-        <h4 style="margin:16px 0 10px;">Change Status</h4>
-        <div class="status-flow">
-          <button class="st-btn" data-st="New Lead">🆕 New Lead</button>
-          <button class="st-btn" data-st="Contacted">📞 Contacted</button>
-          <button class="st-btn" data-st="Interested">🔥 Interested</button>
-          <button class="st-btn" data-st="Counselling Scheduled">📅 Scheduled</button>
-          <button class="st-btn" data-st="Admission Pending">⏳ Pending</button>
-        </div>
-        <div class="status-final">
-          <button class="st-btn st-green" data-st="Enrolled">✅ Enrolled</button>
-          <button class="st-btn st-green" data-st="Completed">✅ Completed</button>
-          <button class="st-btn st-red" data-st="Lost">❌ Lost</button>
-        </div>
+        <!-- Status change (hidden when API not configured) -->
+        <div id="mEditSection">
+          <h4 style="margin:16px 0 10px;">Change Status</h4>
+          <div class="status-flow">
+            <button class="st-btn" data-st="New Lead">🆕 New Lead</button>
+            <button class="st-btn" data-st="Contacted">📞 Contacted</button>
+            <button class="st-btn" data-st="Interested">🔥 Interested</button>
+            <button class="st-btn" data-st="Counselling Scheduled">📅 Scheduled</button>
+            <button class="st-btn" data-st="Admission Pending">⏳ Pending</button>
+          </div>
+          <div class="status-final">
+            <button class="st-btn st-green" data-st="Enrolled">✅ Enrolled</button>
+            <button class="st-btn st-green" data-st="Completed">✅ Completed</button>
+            <button class="st-btn st-red" data-st="Lost">❌ Lost</button>
+          </div>
 
-        <!-- Notes -->
-        <h4 style="margin:16px 0 8px;">Add Comment / Notes</h4>
-        <textarea id="mNotes" rows="3" placeholder="Follow-up notes, callback details…" class="input-notes"></textarea>
+          <h4 style="margin:16px 0 8px;">Add Comment / Notes</h4>
+          <textarea id="mNotes" rows="3" placeholder="Follow-up notes, callback details…" class="input-notes"></textarea>
+        </div>
 
         <!-- Previous remarks -->
         <h4 style="margin:16px 0 8px;">Previous Remarks</h4>
@@ -144,7 +155,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-gold" id="saveBtn" disabled onclick="saveChanges()">💾 Save Changes</button>
+        <button class="btn btn-gold" id="saveBtn" disabled onclick="saveChanges()" style="display:none;">💾 Save Changes</button>
       </div>
     </div>
   </div>
