@@ -32,7 +32,53 @@ function showBanner(msg,isErr){var el=$('statusBanner');el.textContent=msg;el.cl
 function hideBanner(){$('statusBanner').classList.add('hidden');}
 function hasApi(){return config.appsScriptUrl&&config.appsScriptUrl.length>20&&config.appsScriptUrl.indexOf('/exec')!==-1;}
 
-/* ===================== APPS SCRIPT CALLER (iframe form) ===================== */
+/* ===================== APPS SCRIPT READ (JSONP) ===================== */
+/**
+ * READ path uses JSONP because we need to RECEIVE data back from Apps Script.
+ * Apps Script v9 already supports ?callback=... in doGet().
+ */
+function readFromAppsScript(params){
+  return new Promise(function(resolve,reject){
+    var cb='_cb_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+    var url=config.appsScriptUrl+'?callback='+cb;
+    Object.keys(params).forEach(function(k){url+='&'+k+'='+encodeURIComponent(params[k]||'');});
+    console.log('📡 JSONP read:',url.substring(0,120)+'…');
+
+    var script=document.createElement('script');
+    var timeout;
+
+    window[cb]=function(data){
+      cleanup();
+      console.log('📥 JSONP data received');
+      resolve(data);
+    };
+
+    script.onerror=function(){
+      cleanup();
+      reject(new Error('JSONP load failed (check Apps Script deployment / access)'));
+    };
+
+    function cleanup(){
+      clearTimeout(timeout);
+      try{delete window[cb];}catch(e){}
+      try{script.remove();}catch(e){}
+    }
+
+    timeout=setTimeout(function(){
+      cleanup();
+      reject(new Error('JSONP timeout (Apps Script did not return data in time)'));
+    },15000);
+
+    script.src=url;
+    document.head.appendChild(script);
+  });
+}
+
+/* ===================== APPS SCRIPT WRITE (iframe form) ===================== */
+/**
+ * WRITE path uses hidden iframe form submission.
+ * Great for saving data because form submits are not blocked by CORS.
+ */
 function sendToAppsScript(params){
   return new Promise(function(resolve){
     var id='_f_'+Date.now();
@@ -42,9 +88,9 @@ function sendToAppsScript(params){
     var form=document.createElement('form');form.method='GET';form.action=config.appsScriptUrl;form.target=id;form.style.display='none';
     Object.keys(params).forEach(function(k){var inp=document.createElement('input');inp.type='hidden';inp.name=k;inp.value=params[k]||'';form.appendChild(inp);});
     document.body.appendChild(form);
-    console.log('📤 Sending:',JSON.stringify(params));
+    console.log('📤 Sending write:',JSON.stringify(params));
     var done=false;
-    iframe.onload=function(){if(done)return;done=true;var result=null;try{var t=iframe.contentDocument.body.textContent||'';if(t.trim().charAt(0)==='{')result=JSON.parse(t);console.log('📥 Response:',t.substring(0,200));}catch(e){console.log('📥 Loaded (cross-origin)');}setTimeout(function(){try{iframe.remove();form.remove();}catch(e){}},1000);resolve(result||{success:true,note:'sent'});};
+    iframe.onload=function(){if(done)return;done=true;var result=null;try{var t=iframe.contentDocument.body.textContent||'';if(t.trim().charAt(0)==='{')result=JSON.parse(t);console.log('📥 Write response:',t.substring(0,200));}catch(e){console.log('📥 Write loaded (cross-origin)');}setTimeout(function(){try{iframe.remove();form.remove();}catch(e){}},1000);resolve(result||{success:true,note:'sent'});};
     setTimeout(function(){if(done)return;done=true;try{iframe.remove();form.remove();}catch(e){}resolve({success:true,note:'timeout'});},12000);
     form.submit();
   });
@@ -78,7 +124,7 @@ function mapLead(r) {
 
 async function fetchFromApi() {
   console.log('📡 Fetching from Apps Script API (all tabs)…');
-  var result = await sendToAppsScript({ action: 'getLeads' });
+  var result = await readFromAppsScript({ action: 'getLeads' });
   if (result && result.leads) {
     console.log('✅ API returned', result.leads.length, 'leads from tabs:', (result.tabs||[]).join(', '));
     return result.leads.map(mapLead);
@@ -196,8 +242,20 @@ function openModal(leadId){
   $('mCity').textContent=lead.city||'—';$('mCounsellor').textContent=lead.counsellor||'—';
   $('mCurrentStatus').textContent=lead.status;
   $('mRemarks').textContent=lead.remarks||'No previous remarks';
-  $('mNotes').value='';$('saveBtn').disabled=true;
-  document.querySelectorAll('.st-btn').forEach(function(btn){btn.classList.remove('active');if(btn.dataset.st===lead.status)btn.classList.add('active');});
+
+  // Show/hide edit controls based on API availability
+  if(hasApi()){
+    $('mEditSection').style.display='block';
+    $('saveBtn').style.display='inline-flex';
+    $('mApiWarning').style.display='none';
+    $('mNotes').value='';$('saveBtn').disabled=true;
+    document.querySelectorAll('.st-btn').forEach(function(btn){btn.classList.remove('active');if(btn.dataset.st===lead.status)btn.classList.add('active');});
+  }else{
+    $('mEditSection').style.display='none';
+    $('saveBtn').style.display='none';
+    $('mApiWarning').style.display='block';
+  }
+
   $('modal').style.display='flex';
 }
 function closeModal(){$('modal').style.display='none';selectedLead=null;selectedStatus=null;}
@@ -210,21 +268,24 @@ async function saveChanges(){
   if(!leadId){alert('⚠️ This lead has no Lead_ID. Run Backfill in Apps Script.');return;}
   $('saveBtn').disabled=true;$('saveBtn').textContent='⏳ Saving…';
 
-  if(hasApi()){
-    try{
-      var result=await sendToAppsScript({action:'updateLead',leadId:leadId,status:newStatus,notes:notes});
-      console.log('✅ Result:',result);
-      if(result&&result.error){alert('❌ '+result.error);$('saveBtn').disabled=false;$('saveBtn').textContent='💾 Save Changes';return;}
-      if(ARCHIVE.indexOf(newStatus)!==-1)alert('✅ '+leadId+' → "'+newStatus+'" (archived)');
-      else alert('✅ Status → "'+newStatus+'"');
-    }catch(err){console.error('❌',err);alert('⚠️ Request sent. Click ⟳ Refresh to verify.');}
-  }else{alert('📖 Read-only. Deploy Apps Script Web App for edit access.');}
+  if(!hasApi()){
+    // Should never reach here — Save button is hidden when API not configured
+    closeModal();return;
+  }
+
+  try{
+    var result=await sendToAppsScript({action:'updateLead',leadId:leadId,status:newStatus,notes:notes});
+    console.log('✅ Result:',result);
+    if(result&&result.error){alert('❌ '+result.error);$('saveBtn').disabled=false;$('saveBtn').textContent='💾 Save Changes';return;}
+    if(ARCHIVE.indexOf(newStatus)!==-1)alert('✅ '+leadId+' → "'+newStatus+'" (archived)');
+    else alert('✅ Status → "'+newStatus+'"');
+  }catch(err){console.error('❌',err);alert('⚠️ Request sent. Click ⟳ Refresh to verify.');}
 
   // Update local state (lead stays — KPIs count it)
   var idx=allLeads.findIndex(function(l){return l.leadId===leadId;});
   if(idx!==-1){allLeads[idx].status=newStatus;if(notes){var ts=new Date().toLocaleString('en-IN');allLeads[idx].remarks='['+ts+'] '+newStatus+': '+notes+'\n'+(allLeads[idx].remarks||'');}}
   renderAll();closeModal();$('saveBtn').disabled=false;$('saveBtn').textContent='💾 Save Changes';
-  if(hasApi())setTimeout(refresh,5000);
+  setTimeout(refresh,5000);
 }
 
 /* ===================== INIT ===================== */
