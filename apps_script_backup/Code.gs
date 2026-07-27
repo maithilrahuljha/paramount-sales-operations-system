@@ -1,11 +1,16 @@
 /**
- * Paramount Merchant Navy — Apps Script v7
+ * Paramount Merchant Navy — Apps Script v9
  *
- * FIXES:
- *   1. onFormSubmit auto-archives if form status is Enrolled/Completed/Lost
- *   2. syncFollowup sets correct priority based on actual status
- *   3. updateLead also removes the Followup_Tracker row when archiving
- *   4. Followup_Tracker stays clean — no ghost entries
+ * ARCHITECTURE:
+ *   The dashboard calls getLeads API which reads ALL tabs:
+ *   - Form Responses 1: active leads (main data)
+ *   - Archived_YYYY_MM: closed leads (for KPI counting)
+ *   - Followup_Tracker: followup info (merged into lead data)
+ *
+ *   The API returns ONE combined list with every lead ever created.
+ *   Dashboard uses this for accurate KPIs.
+ *
+ *   Published CSV is still used as FALLBACK if API is slow/down.
  */
 
 var TZ = 'Asia/Kolkata';
@@ -13,7 +18,7 @@ var PREFIX = 'PMN';
 var DIGITS = 4;
 var ARCHIVE_STATUSES = ['Enrolled', 'Completed', 'Lost'];
 
-// ============ FIND COLUMNS BY NAME ============
+// ============ FIND COLUMNS ============
 
 function findColumns(sheet) {
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -38,15 +43,13 @@ function findColumns(sheet) {
   return cols;
 }
 
-// ============ PRIORITY HELPER ============
-
-function statusToPriority(status) {
-  if (['Interested', 'Counselling Scheduled', 'Admission Pending'].indexOf(status) !== -1) return 'P1';
-  if (ARCHIVE_STATUSES.indexOf(status) !== -1) return 'P3';
-  return 'P2'; // New Lead, Contacted
+function statusToPriority(s) {
+  if (['Interested','Counselling Scheduled','Admission Pending'].indexOf(s) !== -1) return 'P1';
+  if (ARCHIVE_STATUSES.indexOf(s) !== -1) return 'P3';
+  return 'P2';
 }
 
-// ============ FORM SUBMIT TRIGGER ============
+// ============ FORM SUBMIT ============
 
 function onFormSubmit(e) {
   try {
@@ -56,224 +59,194 @@ function onFormSubmit(e) {
     if (row <= 1) return;
     var cols = findColumns(sheet);
 
-    // Generate Lead ID
     var leadId = '';
     if (cols.leadId) {
       var idCell = sheet.getRange(row, cols.leadId);
-      if (!idCell.getValue()) {
-        leadId = generateId(sheet, cols.leadId);
-        idCell.setValue(leadId);
-      } else {
-        leadId = String(idCell.getValue());
-      }
+      if (!idCell.getValue()) { leadId = generateId(sheet, cols.leadId); idCell.setValue(leadId); }
+      else leadId = String(idCell.getValue());
     }
 
-    // Set default status only if empty (form already sets it)
     var status = '';
     if (cols.status) {
       var stCell = sheet.getRange(row, cols.status);
       status = String(stCell.getValue()).trim();
-      if (!status) {
-        status = 'New Lead';
-        stCell.setValue(status);
-      }
+      if (!status) { status = 'New Lead'; stCell.setValue(status); }
     }
 
-    // If status is already Enrolled/Completed/Lost → archive immediately
-    // (user submitted form with a final status)
+    // If final status → copy to archive, keep in main sheet, skip followup
     if (ARCHIVE_STATUSES.indexOf(status) !== -1) {
-      archiveRow(ss, sheet, row, status, cols);
-      // Do NOT sync to followup — it's already closed
+      copyToArchive(ss, sheet, row, status);
       return;
     }
 
-    // Otherwise sync to Followup_Tracker
+    // Active → sync to followup
     syncFollowup(ss, sheet, row, cols, leadId, status);
-
   } catch (err) { Logger.log('onFormSubmit: ' + err); }
 }
 
-// ============ ID GENERATION ============
-
-function generateId(sheet, leadIdCol) {
+function generateId(sheet, col) {
   var year = Utilities.formatDate(new Date(), TZ, 'yyyy');
   var pfx = PREFIX + '-' + year + '-';
-  var last = sheet.getLastRow();
-  var max = 0;
+  var last = sheet.getLastRow(), max = 0;
   if (last > 1) {
-    var ids = sheet.getRange(2, leadIdCol, last - 1, 1).getValues();
-    ids.forEach(function(r) {
+    sheet.getRange(2, col, last-1, 1).getValues().forEach(function(r) {
       var v = String(r[0]);
-      if (v.indexOf(pfx) === 0) {
-        var n = parseInt(v.substring(pfx.length), 10);
-        if (n > max) max = n;
-      }
+      if (v.indexOf(pfx) === 0) { var n = parseInt(v.substr(pfx.length),10); if(n>max) max=n; }
     });
   }
-  var next = String(max + 1);
-  while (next.length < DIGITS) next = '0' + next;
-  return pfx + next;
+  var s = String(max+1); while(s.length<DIGITS) s='0'+s;
+  return pfx+s;
 }
 
-// ============ FOLLOWUP SYNC ============
+// ============ FOLLOWUP ============
 
 function syncFollowup(ss, sheet, row, cols, leadId, status) {
   try {
     var fu = ss.getSheetByName('Followup_Tracker');
     if (!fu) {
       fu = ss.insertSheet('Followup_Tracker');
-      fu.getRange(1, 1, 1, 8).setValues([['Lead_ID', 'Name', 'Phone', 'Course', 'Counsellor', 'Status', 'Priority', 'Notes']]);
-      fu.getRange(1, 1, 1, 8).setBackground('#1a237e').setFontColor('#fff').setFontWeight('bold');
+      fu.getRange(1,1,1,8).setValues([['Lead_ID','Name','Phone','Course','Counsellor','Status','Priority','Notes']]);
+      fu.getRange(1,1,1,8).setBackground('#1a237e').setFontColor('#fff').setFontWeight('bold');
     }
+    var gv = function(c) { return cols[c] ? sheet.getRange(row,cols[c]).getValue() : ''; };
+    var id = leadId || gv('leadId'), st = status || gv('status') || 'New Lead';
 
-    var gv = function(col) { return cols[col] ? sheet.getRange(row, cols[col]).getValue() : ''; };
-    var id = leadId || gv('leadId');
-    var st = status || gv('status') || 'New Lead';
-
-    // Check if this lead already exists in Followup_Tracker (avoid duplicates)
+    // Upsert: update if exists, insert if not
     var fuLast = fu.getLastRow();
     if (fuLast > 1) {
-      var existingIds = fu.getRange(2, 1, fuLast - 1, 1).getValues();
-      for (var i = 0; i < existingIds.length; i++) {
-        if (String(existingIds[i][0]).trim() === String(id).trim()) {
-          // Already exists — update instead of adding duplicate
-          fu.getRange(i + 2, 6).setValue(st);
-          fu.getRange(i + 2, 7).setValue(statusToPriority(st));
+      var eids = fu.getRange(2,1,fuLast-1,1).getValues();
+      for (var i=0; i<eids.length; i++) {
+        if (String(eids[i][0]).trim() === String(id).trim()) {
+          fu.getRange(i+2,6).setValue(st);
+          fu.getRange(i+2,7).setValue(statusToPriority(st));
           return;
         }
       }
     }
-
-    // New entry
-    fu.appendRow([
-      id,
-      gv('name'),
-      gv('phone'),
-      gv('course'),
-      gv('counsellor'),
-      st,
-      statusToPriority(st),
-      'New lead'
-    ]);
-  } catch (e) { Logger.log('syncFollowup: ' + e); }
+    fu.appendRow([id, gv('name'), gv('phone'), gv('course'), gv('counsellor'), st, statusToPriority(st), 'New lead']);
+  } catch(e) { Logger.log('syncFollowup: '+e); }
 }
-
-// ============ REMOVE FROM FOLLOWUP ============
 
 function removeFromFollowup(ss, leadId) {
   try {
     var fu = ss.getSheetByName('Followup_Tracker');
     if (!fu) return;
-    var fuLast = fu.getLastRow();
-    if (fuLast <= 1) return;
-
-    var fuIds = fu.getRange(2, 1, fuLast - 1, 1).getValues();
-    for (var i = fuIds.length - 1; i >= 0; i--) {
-      if (String(fuIds[i][0]).trim() === leadId) {
-        fu.deleteRow(i + 2);
-        Logger.log('Removed ' + leadId + ' from Followup_Tracker');
-        return;
-      }
+    var last = fu.getLastRow();
+    if (last <= 1) return;
+    var ids = fu.getRange(2,1,last-1,1).getValues();
+    for (var i = ids.length-1; i >= 0; i--) {
+      if (String(ids[i][0]).trim() === leadId) { fu.deleteRow(i+2); return; }
     }
-  } catch (e) { Logger.log('removeFromFollowup: ' + e); }
+  } catch(e) {}
 }
 
-// ============ ARCHIVE ============
+// ============ ARCHIVE (copy only, never delete from main) ============
 
-function archiveRow(ss, sheet, row, reason, cols) {
+function copyToArchive(ss, sheet, row, reason) {
   try {
     var ts = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
     var archName = 'Archived_' + Utilities.formatDate(new Date(), TZ, 'yyyy_MM');
     var arch = ss.getSheetByName(archName);
     if (!arch) {
       arch = ss.insertSheet(archName);
-      var hdrs = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      hdrs.push('Archived_Date', 'Reason');
-      arch.getRange(1, 1, 1, hdrs.length).setValues([hdrs]);
-      arch.getRange(1, 1, 1, hdrs.length).setBackground('#1a237e').setFontColor('#fff').setFontWeight('bold');
+      var hdrs = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+      hdrs.push('Archived_Date','Reason');
+      arch.getRange(1,1,1,hdrs.length).setValues([hdrs]);
+      arch.getRange(1,1,1,hdrs.length).setBackground('#1a237e').setFontColor('#fff').setFontWeight('bold');
     }
-
-    var rd = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var rd = sheet.getRange(row,1,1,sheet.getLastColumn()).getValues()[0];
     rd.push(ts, reason);
     arch.appendRow(rd);
-
-    // Get leadId before deleting row
-    var leadId = cols.leadId ? String(sheet.getRange(row, cols.leadId).getValue()).trim() : '';
-
-    // Delete from main sheet
-    sheet.deleteRow(row);
-    Logger.log('Archived row ' + row + ' → ' + archName + ' (reason: ' + reason + ')');
-
-    // Also remove from Followup_Tracker
-    if (leadId) {
-      removeFromFollowup(ss, leadId);
-    }
-  } catch (e) { Logger.log('archiveRow: ' + e); }
+  } catch(e) { Logger.log('copyToArchive: '+e); }
 }
 
 // ============ WEB APP ============
 
 function doGet(e) {
   var p = e.parameter || {};
-  var callback = p.callback || '';
+  var cb = p.callback || '';
   var result;
-
   try {
-    if (p.action === 'updateLead') {
-      result = updateLead(p.leadId, p.status, p.notes);
-    } else if (p.action === 'getLeads') {
-      result = getLeads();
-    } else {
-      result = { ok: true, message: 'Paramount CRM API v7' };
-    }
-  } catch (err) { result = { error: String(err) }; }
-
+    if (p.action === 'updateLead') result = updateLead(p.leadId, p.status, p.notes);
+    else if (p.action === 'getLeads') result = getAllLeadsCombined();
+    else result = { ok:true, message:'Paramount CRM API v9' };
+  } catch(err) { result = { error: String(err) }; }
   var json = JSON.stringify(result);
-  if (callback) {
-    return ContentService.createTextOutput(callback + '(' + json + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+  if (cb) return ContentService.createTextOutput(cb+'('+json+')').setMimeType(ContentService.MimeType.JAVASCRIPT);
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
   try {
     var p = e.parameter || {};
-    if (e.postData) {
-      var body = JSON.parse(e.postData.contents);
-      Object.keys(body).forEach(function(k) { p[k] = body[k]; });
-    }
-    var result = (p.action === 'updateLead') ? updateLead(p.leadId, p.status, p.notes) : { error: 'Unknown action' };
+    if (e.postData) { var body = JSON.parse(e.postData.contents); Object.keys(body).forEach(function(k){p[k]=body[k];}); }
+    var result = (p.action==='updateLead') ? updateLead(p.leadId, p.status, p.notes) : {error:'Unknown action'};
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
-  } catch (e) {
-    return ContentService.createTextOutput(JSON.stringify({ error: String(e) })).setMimeType(ContentService.MimeType.JSON);
-  }
+  } catch(e) { return ContentService.createTextOutput(JSON.stringify({error:String(e)})).setMimeType(ContentService.MimeType.JSON); }
 }
 
-// ============ API: GET LEADS ============
+// ============ GET ALL LEADS (COMBINED from all tabs) ============
 
-function getLeads() {
+function getAllLeadsCombined() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[0];
-  var last = sheet.getLastRow();
-  if (last <= 1) return { leads: [] };
-  var cols = findColumns(sheet);
-  var data = sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues();
-  return {
-    leads: data.map(function(r) {
-      var o = {};
-      Object.keys(cols).forEach(function(k) { o[k] = r[cols[k] - 1] || ''; });
-      return o;
-    })
-  };
+  var allSheets = ss.getSheets();
+  var allLeads = [];
+  var seenIds = {};
+
+  // Read EACH sheet tab
+  for (var s = 0; s < allSheets.length; s++) {
+    var sheet = allSheets[s];
+    var tabName = sheet.getName();
+    var last = sheet.getLastRow();
+    if (last <= 1) continue;
+
+    var cols = findColumns(sheet);
+    if (!cols.leadId && !cols.name) continue; // skip tabs without lead data
+
+    var data = sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues();
+
+    for (var r = 0; r < data.length; r++) {
+      var row = data[r];
+      var id = cols.leadId ? String(row[cols.leadId - 1]).trim() : '';
+      var name = cols.name ? String(row[cols.name - 1]).trim() : '';
+      if (!id && !name) continue; // skip empty rows
+
+      // Deduplicate: if same Lead_ID appears in main + archive, use main sheet version
+      // (main sheet has the latest status)
+      var key = id || name;
+      if (seenIds[key]) continue;
+      seenIds[key] = true;
+
+      var lead = {
+        leadId: id,
+        name: name,
+        email: cols.email ? String(row[cols.email - 1]) : '',
+        phone: cols.phone ? String(row[cols.phone - 1]) : '',
+        city: cols.city ? String(row[cols.city - 1]) : '',
+        course: cols.course ? String(row[cols.course - 1]) : '',
+        source: cols.source ? String(row[cols.source - 1]) : '',
+        batch: cols.batch ? String(row[cols.batch - 1]) : '',
+        education: cols.education ? String(row[cols.education - 1]) : '',
+        counsellor: cols.counsellor ? String(row[cols.counsellor - 1]) : '',
+        remarks: cols.remarks ? String(row[cols.remarks - 1]) : '',
+        status: cols.status ? String(row[cols.status - 1]).trim() : 'New Lead',
+        timestamp: cols.timestamp ? String(row[cols.timestamp - 1]) : '',
+        tab: tabName
+      };
+
+      allLeads.push(lead);
+    }
+  }
+
+  return { leads: allLeads, count: allLeads.length, tabs: allSheets.map(function(s){return s.getName();}) };
 }
 
-// ============ API: UPDATE LEAD ============
+// ============ UPDATE LEAD ============
 
 function updateLead(leadId, newStatus, notes) {
   if (!leadId) return { error: 'Missing leadId' };
-
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[0];
+  var sheet = ss.getSheets()[0]; // Main sheet (Form Responses 1)
   var cols = findColumns(sheet);
   if (!cols.leadId) return { error: 'Lead_ID column not found' };
   if (!cols.status) return { error: 'Status column not found' };
@@ -281,62 +254,59 @@ function updateLead(leadId, newStatus, notes) {
   var last = sheet.getLastRow();
   if (last <= 1) return { error: 'No data' };
 
-  // Find the row
-  var ids = sheet.getRange(2, cols.leadId, last - 1, 1).getValues();
+  var ids = sheet.getRange(2, cols.leadId, last-1, 1).getValues();
   var row = -1;
-  for (var i = 0; i < ids.length; i++) {
-    if (String(ids[i][0]).trim() === leadId) { row = i + 2; break; }
+  for (var i=0; i<ids.length; i++) {
+    if (String(ids[i][0]).trim() === leadId) { row = i+2; break; }
   }
   if (row === -1) return { error: 'Lead not found: ' + leadId };
 
   var ts = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
 
-  // Update status
-  if (newStatus) {
-    sheet.getRange(row, cols.status).setValue(newStatus);
-  }
+  // Update status in main sheet (NEVER delete)
+  if (newStatus) sheet.getRange(row, cols.status).setValue(newStatus);
 
-  // Append notes to remarks
+  // Append notes
   if (notes && cols.remarks) {
     var old = sheet.getRange(row, cols.remarks).getValue() || '';
-    sheet.getRange(row, cols.remarks).setValue('[' + ts + '] ' + (newStatus || '') + ': ' + notes + '\n' + old);
+    sheet.getRange(row, cols.remarks).setValue('['+ts+'] '+(newStatus||'')+': '+notes+'\n'+old);
   }
 
-  // If archive status → archive + remove from followup
+  // If final status → copy to archive + remove from followup
   if (ARCHIVE_STATUSES.indexOf(newStatus) !== -1) {
-    archiveRow(ss, sheet, row, newStatus, cols);
-    // archiveRow already removes from Followup_Tracker
-    return { success: true, leadId: leadId, status: newStatus, archived: true };
+    copyToArchive(ss, sheet, row, newStatus);
+    removeFromFollowup(ss, leadId);
+    return { success:true, leadId:leadId, status:newStatus, archived:true };
   }
 
-  // Otherwise just update Followup_Tracker status + priority
+  // Active status → update followup
   try {
     var fu = ss.getSheetByName('Followup_Tracker');
     if (fu && fu.getLastRow() > 1) {
-      var fuIds = fu.getRange(2, 1, fu.getLastRow() - 1, 1).getValues();
-      for (var j = 0; j < fuIds.length; j++) {
+      var fuIds = fu.getRange(2,1,fu.getLastRow()-1,1).getValues();
+      for (var j=0; j<fuIds.length; j++) {
         if (String(fuIds[j][0]).trim() === leadId) {
-          fu.getRange(j + 2, 6).setValue(newStatus);
-          fu.getRange(j + 2, 7).setValue(statusToPriority(newStatus));
+          fu.getRange(j+2,6).setValue(newStatus);
+          fu.getRange(j+2,7).setValue(statusToPriority(newStatus));
           if (notes) {
-            var oldNotes = fu.getRange(j + 2, 8).getValue() || '';
-            fu.getRange(j + 2, 8).setValue('[' + ts + '] ' + notes + '\n' + oldNotes);
+            var oldN = fu.getRange(j+2,8).getValue()||'';
+            fu.getRange(j+2,8).setValue('['+ts+'] '+notes+'\n'+oldN);
           }
           break;
         }
       }
     }
-  } catch (e) { Logger.log('Followup update: ' + e); }
+  } catch(e) {}
 
-  return { success: true, leadId: leadId, status: newStatus };
+  return { success:true, leadId:leadId, status:newStatus };
 }
 
 // ============ MENU ============
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🏢 Paramount CRM')
-    .addItem('🔄 Backfill Lead IDs + Sync Followups', 'backfill')
-    .addItem('🧪 Show Column Map', 'showColMap')
+    .addItem('🔄 Backfill Lead IDs + Sync','backfill')
+    .addItem('🧪 Show Column Map','showColMap')
     .addToUi();
 }
 
@@ -344,32 +314,23 @@ function backfill() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheets()[0];
   var cols = findColumns(sheet);
-  var last = sheet.getLastRow();
-  var count = 0;
+  var last = sheet.getLastRow(), count = 0;
   if (!cols.leadId) { SpreadsheetApp.getUi().alert('No Lead_ID column!'); return; }
-  for (var r = 2; r <= last; r++) {
-    var id = sheet.getRange(r, cols.leadId).getValue();
-    if (!id) {
-      id = generateId(sheet, cols.leadId);
-      sheet.getRange(r, cols.leadId).setValue(id);
-      count++;
-    }
-    if (cols.status && !sheet.getRange(r, cols.status).getValue()) {
-      sheet.getRange(r, cols.status).setValue('New Lead');
-    }
-    var st = cols.status ? String(sheet.getRange(r, cols.status).getValue()).trim() : 'New Lead';
-    // Only sync to followup if not an archive status
-    if (ARCHIVE_STATUSES.indexOf(st) === -1) {
-      syncFollowup(ss, sheet, r, cols, String(id), st);
-    }
+  for (var r=2; r<=last; r++) {
+    var id = sheet.getRange(r,cols.leadId).getValue();
+    if (!id) { id = generateId(sheet,cols.leadId); sheet.getRange(r,cols.leadId).setValue(id); count++; }
+    if (cols.status && !sheet.getRange(r,cols.status).getValue()) sheet.getRange(r,cols.status).setValue('New Lead');
+    var st = cols.status ? String(sheet.getRange(r,cols.status).getValue()).trim() : 'New Lead';
+    if (ARCHIVE_STATUSES.indexOf(st)===-1) syncFollowup(ss,sheet,r,cols,String(id),st);
+    else removeFromFollowup(ss,String(id));
   }
-  SpreadsheetApp.getUi().alert('Backfilled ' + count + ' IDs.\nFollowup_Tracker synced (active leads only).');
+  SpreadsheetApp.getUi().alert('Backfilled '+count+' IDs. Followup synced.');
 }
 
 function showColMap() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   var cols = findColumns(sheet);
   var msg = 'Column Map:\n\n';
-  Object.keys(cols).forEach(function(k) { msg += k + ' → Col ' + cols[k] + '\n'; });
+  Object.keys(cols).forEach(function(k) { msg += k+' → Col '+cols[k]+'\n'; });
   SpreadsheetApp.getUi().alert(msg);
 }
