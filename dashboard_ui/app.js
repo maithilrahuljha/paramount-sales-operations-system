@@ -179,7 +179,21 @@ function openStudentsModal(){
   $('studentsModal').style.display='flex';
   var students=allLeads.filter(function(l){return l.status==='Enrolled'||l.status==='Completed';});
   if(!students.length){$('studentsBody').innerHTML='<tr><td colspan="8" class="muted">No enrolled students yet</td></tr>';return;}
-  $('studentsBody').innerHTML=students.map(function(s){return'<tr><td style="font-family:monospace;font-weight:600">'+esc(s.leadId||'—')+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.phone||'—')+'</td><td>'+esc(s.email||'—')+'</td><td>'+esc(s.course||'—')+'</td><td>'+esc(s.batch||'—')+'</td><td>'+esc(s.counsellor||'—')+'</td><td><span class="badge badge-closed">'+esc(s.status)+'</span></td></tr>';}).join('');
+  $('studentsBody').innerHTML=students.map(function(s){
+    var formUrl=buildEnrollmentUrl(s);
+    var formBtn=formUrl
+      ?'<button class="edit-btn" style="background:#2e7d32" onclick="window.open(&quot;'+esc(formUrl)+'&quot;,&quot;_blank&quot;)">📝 Fill Form</button>'
+      :'<span class="muted" style="padding:0;font-size:.75rem">No form URL</span>';
+    return'<tr>'+
+      '<td style="font-family:monospace;font-weight:600">'+esc(s.leadId||'—')+'</td>'+
+      '<td>'+esc(s.name)+'</td>'+
+      '<td><a href="tel:'+esc(s.phone)+'" class="phone-link" onclick="event.stopPropagation()">'+esc(s.phone||'—')+'</a></td>'+
+      '<td>'+esc(s.email||'—')+'</td>'+
+      '<td>'+esc(s.course||'—')+'</td>'+
+      '<td>'+esc(s.counsellor||'—')+'</td>'+
+      '<td><span class="badge badge-closed">'+esc(s.status)+'</span></td>'+
+      '<td>'+formBtn+'</td></tr>';
+  }).join('');
 }
 function closeStudentsModal(){$('studentsModal').style.display='none';}
 function copyStudentsToClipboard(){
