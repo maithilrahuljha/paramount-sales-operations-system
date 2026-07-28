@@ -136,15 +136,16 @@
 
     <!-- ===== ENROLLED STUDENTS MODAL ===== -->
     <div id="studentsModal" class="modal-overlay" style="display:none;">
-      <div class="modal" style="max-width:900px;">
+      <div class="modal" style="max-width:960px;">
         <div class="modal-header" style="background:#2e7d32;">
           <h3>🎓 Enrolled Students</h3>
           <button class="modal-close" onclick="closeStudentsModal()">×</button>
         </div>
         <div class="modal-body">
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">Click <strong>📝 Fill Form</strong> to open the Enrollment Form pre-filled with that student's data (fee details, documents).</p>
           <div class="card table-card" style="margin:0;">
             <table>
-              <thead><tr style="background:#2e7d32;"><th>Lead ID</th><th>Name</th><th>📞 Phone</th><th>📧 Email</th><th>Course</th><th>Batch</th><th>Counsellor</th><th>Status</th></tr></thead>
+              <thead><tr style="background:#2e7d32;"><th>Lead ID</th><th>Name</th><th>📞 Phone</th><th>📧 Email</th><th>Course</th><th>Counsellor</th><th>Status</th><th>Action</th></tr></thead>
               <tbody id="studentsBody"><tr><td colspan="8" class="muted">Loading…</td></tr></tbody>
             </table>
           </div>
