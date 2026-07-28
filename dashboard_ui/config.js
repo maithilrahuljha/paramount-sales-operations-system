@@ -29,8 +29,8 @@ const config = {
   // Change these passwords as needed
   users: {
     'admin':      'paramount2026',
-    'counsellor': 'pmn@sales',
-    'manager':    'pmn@mgr'
+    'rishita': 'rishita@pmn',
+    'dev':    'dev@pmn'
   },
 
   refreshInterval: 300000,
