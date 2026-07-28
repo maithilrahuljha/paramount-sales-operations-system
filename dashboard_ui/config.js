@@ -16,8 +16,24 @@ const config = {
   // Without this, dashboard is READ-ONLY
   appsScriptUrl: 'https://script.google.com/macros/s/AKfycbyb8EiRAPsUDRwNsAWjkUBx2-6DML9dG91oj6tAZrLam7rGUUCjftam1w8J9WP97lSgAQ/exec',
 
-  refreshInterval: 300000,
+ // Enrollment form (opens pre-filled when lead → Enrolled)
+  enrollmentFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdnnuHiW-TF-t6TqjdqWO-4OwsEhLp4VwdyC05E88jOy6XhNA/viewform',
+  enrollmentEntryIds: {
+    leadId: '1357968253',
+    name:   '1763241178',
+    phone:  '393247151',
+    email:  '772771328'
+  },
 
+  // Login credentials (simple client-side gate — not for high security)
+  // Change these passwords as needed
+  users: {
+    'admin':      'paramount2026',
+    'counsellor': 'pmn@sales',
+    'manager':    'pmn@mgr'
+  },
+
+  refreshInterval: 300000,
   branding: {
     title: 'Paramount Merchant Navy',
     subtitle: 'Sales Operations Command Center'
