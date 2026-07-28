@@ -167,9 +167,9 @@ function doGet(e) {
   var cb = p.callback || '';
   var result;
   try {
-    if (p.action === 'updateLead') result = updateLead(p.leadId, p.status, p.notes);
-    else if (p.action === 'getLeads') result = getAllLeadsCombined();
-    else result = { ok:true, message:'Paramount CRM API v9' };
+    if (p.action === 'updateLead') result = updateLead(p.leadId, p.status, p.notes, p.fields);
+    else if (p.action === 'getLeads') result = getDashboardLeads();
+    else result = { ok:true, message:'Paramount CRM API v10' };
   } catch(err) { result = { error: String(err) }; }
   var json = JSON.stringify(result);
   if (cb) return ContentService.createTextOutput(cb+'('+json+')').setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -180,73 +180,71 @@ function doPost(e) {
   try {
     var p = e.parameter || {};
     if (e.postData) { var body = JSON.parse(e.postData.contents); Object.keys(body).forEach(function(k){p[k]=body[k];}); }
-    var result = (p.action==='updateLead') ? updateLead(p.leadId, p.status, p.notes) : {error:'Unknown action'};
+    var result = (p.action==='updateLead') ? updateLead(p.leadId, p.status, p.notes, p.fields) : {error:'Unknown action'};
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   } catch(e) { return ContentService.createTextOutput(JSON.stringify({error:String(e)})).setMimeType(ContentService.MimeType.JSON); }
 }
 
-// ============ GET ALL LEADS (COMBINED from all tabs) ============
+// ============ GET DASHBOARD LEADS (MAIN SHEET ONLY) ============
 
-function getAllLeadsCombined() {
+/**
+ * Source of truth for dashboard = FIRST / MAIN sheet only.
+ *
+ * WHY:
+ * - Form Responses 1 keeps ALL leads forever now (active + enrolled + completed + lost)
+ * - Followup_Tracker is a support tab for operations only
+ * - Archived_YYYY_MM is a monthly backup copy only
+ *
+ * Reading all tabs caused duplicates / stale rows / wrong KPI counts.
+ */
+function getDashboardLeads() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var allSheets = ss.getSheets();
-  var allLeads = [];
-  var seenIds = {};
+  var sheet = ss.getSheets()[0]; // Main sheet only
+  var last = sheet.getLastRow();
+  if (last <= 1) return { leads: [], count: 0, tab: sheet.getName() };
 
-  // Read EACH sheet tab
-  for (var s = 0; s < allSheets.length; s++) {
-    var sheet = allSheets[s];
-    var tabName = sheet.getName();
-    var last = sheet.getLastRow();
-    if (last <= 1) continue;
+  var cols = findColumns(sheet);
+  var data = sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues();
+  var leads = [];
 
-    var cols = findColumns(sheet);
-    if (!cols.leadId && !cols.name) continue; // skip tabs without lead data
+  for (var r = 0; r < data.length; r++) {
+    var row = data[r];
+    var id = cols.leadId ? String(row[cols.leadId - 1]).trim() : '';
+    var name = cols.name ? String(row[cols.name - 1]).trim() : '';
+    if (!id && !name) continue;
 
-    var data = sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues();
-
-    for (var r = 0; r < data.length; r++) {
-      var row = data[r];
-      var id = cols.leadId ? String(row[cols.leadId - 1]).trim() : '';
-      var name = cols.name ? String(row[cols.name - 1]).trim() : '';
-      if (!id && !name) continue; // skip empty rows
-
-      // Deduplicate: if same Lead_ID appears in main + archive, use main sheet version
-      // (main sheet has the latest status)
-      var key = id || name;
-      if (seenIds[key]) continue;
-      seenIds[key] = true;
-
-      var lead = {
-        leadId: id,
-        name: name,
-        email: cols.email ? String(row[cols.email - 1]) : '',
-        phone: cols.phone ? String(row[cols.phone - 1]) : '',
-        city: cols.city ? String(row[cols.city - 1]) : '',
-        course: cols.course ? String(row[cols.course - 1]) : '',
-        source: cols.source ? String(row[cols.source - 1]) : '',
-        batch: cols.batch ? String(row[cols.batch - 1]) : '',
-        education: cols.education ? String(row[cols.education - 1]) : '',
-        counsellor: cols.counsellor ? String(row[cols.counsellor - 1]) : '',
-        remarks: cols.remarks ? String(row[cols.remarks - 1]) : '',
-        status: cols.status ? String(row[cols.status - 1]).trim() : 'New Lead',
-        timestamp: cols.timestamp ? String(row[cols.timestamp - 1]) : '',
-        tab: tabName
-      };
-
-      allLeads.push(lead);
-    }
+    leads.push({
+      leadId: id,
+      name: name,
+      email: cols.email ? String(row[cols.email - 1]) : '',
+      phone: cols.phone ? String(row[cols.phone - 1]) : '',
+      city: cols.city ? String(row[cols.city - 1]) : '',
+      course: cols.course ? String(row[cols.course - 1]) : '',
+      source: cols.source ? String(row[cols.source - 1]) : '',
+      batch: cols.batch ? String(row[cols.batch - 1]) : '',
+      education: cols.education ? String(row[cols.education - 1]) : '',
+      counsellor: cols.counsellor ? String(row[cols.counsellor - 1]) : '',
+      remarks: cols.remarks ? String(row[cols.remarks - 1]) : '',
+      status: cols.status ? String(row[cols.status - 1]).trim() : 'New Lead',
+      timestamp: cols.timestamp ? String(row[cols.timestamp - 1]) : '',
+      tab: sheet.getName()
+    });
   }
 
-  return { leads: allLeads, count: allLeads.length, tabs: allSheets.map(function(s){return s.getName();}) };
+  return {
+    leads: leads,
+    count: leads.length,
+    tab: sheet.getName(),
+    note: 'Dashboard source = main sheet only; archive/followup tabs excluded by design'
+  };
 }
 
 // ============ UPDATE LEAD ============
 
-function updateLead(leadId, newStatus, notes) {
+function updateLead(leadId, newStatus, notes, fieldsJson) {
   if (!leadId) return { error: 'Missing leadId' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[0]; // Main sheet (Form Responses 1)
+  var sheet = ss.getSheets()[0];
   var cols = findColumns(sheet);
   if (!cols.leadId) return { error: 'Lead_ID column not found' };
   if (!cols.status) return { error: 'Status column not found' };
@@ -263,8 +261,23 @@ function updateLead(leadId, newStatus, notes) {
 
   var ts = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
 
-  // Update status in main sheet (NEVER delete)
+  // Update status
   if (newStatus) sheet.getRange(row, cols.status).setValue(newStatus);
+
+  // Update editable fields if provided
+  if (fieldsJson) {
+    try {
+      var fields = JSON.parse(fieldsJson);
+      if (fields.name && cols.name) sheet.getRange(row, cols.name).setValue(fields.name);
+      if (fields.phone && cols.phone) sheet.getRange(row, cols.phone).setValue(fields.phone);
+      if (fields.email && cols.email) sheet.getRange(row, cols.email).setValue(fields.email);
+      if (fields.course && cols.course) sheet.getRange(row, cols.course).setValue(fields.course);
+      if (fields.city && cols.city) sheet.getRange(row, cols.city).setValue(fields.city);
+      if (fields.counsellor && cols.counsellor) sheet.getRange(row, cols.counsellor).setValue(fields.counsellor);
+      if (fields.batch && cols.batch) sheet.getRange(row, cols.batch).setValue(fields.batch);
+      if (fields.education && cols.education) sheet.getRange(row, cols.education).setValue(fields.education);
+    } catch(e) { Logger.log('Fields parse error: ' + e); }
+  }
 
   // Append notes
   if (notes && cols.remarks) {
@@ -272,10 +285,14 @@ function updateLead(leadId, newStatus, notes) {
     sheet.getRange(row, cols.remarks).setValue('['+ts+'] '+(newStatus||'')+': '+notes+'\n'+old);
   }
 
-  // If final status → copy to archive + remove from followup
+  // If final status → copy to archive + remove from followup + add to Student DB
   if (ARCHIVE_STATUSES.indexOf(newStatus) !== -1) {
     copyToArchive(ss, sheet, row, newStatus);
     removeFromFollowup(ss, leadId);
+    // If Enrolled/Completed → also add to Student_Master_DB
+    if (newStatus === 'Enrolled' || newStatus === 'Completed') {
+      addToStudentDB(ss, sheet, row, cols, ts);
+    }
     return { success:true, leadId:leadId, status:newStatus, archived:true };
   }
 
@@ -299,6 +316,71 @@ function updateLead(leadId, newStatus, notes) {
   } catch(e) {}
 
   return { success:true, leadId:leadId, status:newStatus };
+}
+
+// ============ STUDENT MASTER DB ============
+
+function addToStudentDB(ss, sheet, row, cols, ts) {
+  try {
+    var db = ss.getSheetByName('Student_Master_DB');
+    if (!db) {
+      db = ss.insertSheet('Student_Master_DB');
+      db.getRange(1,1,1,12).setValues([[
+        'Student_ID','Lead_ID','Student_Name','Phone','Email',
+        'Course_Enrolled','Enrollment_Date','City','Education',
+        'Batch_Month','Counsellor','Remarks'
+      ]]);
+      db.getRange(1,1,1,12).setBackground('#2e7d32').setFontColor('#fff').setFontWeight('bold');
+    }
+
+    var gv = function(col) { return cols[col] ? sheet.getRange(row, cols[col]).getValue() : ''; };
+    var leadId = gv('leadId');
+
+    // Check if already in Student DB (avoid duplicates)
+    var dbLast = db.getLastRow();
+    if (dbLast > 1) {
+      var dbIds = db.getRange(2, 2, dbLast - 1, 1).getValues(); // Column B = Lead_ID
+      for (var i = 0; i < dbIds.length; i++) {
+        if (String(dbIds[i][0]).trim() === String(leadId).trim()) {
+          Logger.log('Student already in DB: ' + leadId);
+          return; // Already exists
+        }
+      }
+    }
+
+    // Generate Student ID: STU-YYYY-XXXX
+    var year = Utilities.formatDate(new Date(), TZ, 'yyyy');
+    var stuPrefix = 'STU-' + year + '-';
+    var maxStu = 0;
+    if (dbLast > 1) {
+      var stuIds = db.getRange(2, 1, dbLast - 1, 1).getValues();
+      stuIds.forEach(function(r) {
+        var v = String(r[0]);
+        if (v.indexOf(stuPrefix) === 0) {
+          var n = parseInt(v.substring(stuPrefix.length), 10);
+          if (n > maxStu) maxStu = n;
+        }
+      });
+    }
+    var studentId = stuPrefix + String(maxStu + 1).padStart(4, '0');
+
+    db.appendRow([
+      studentId,
+      leadId,
+      gv('name'),
+      gv('phone'),
+      gv('email'),
+      gv('course'),
+      ts,                 // Enrollment Date
+      gv('city'),
+      gv('education'),
+      gv('batch'),
+      gv('counsellor'),
+      gv('remarks')
+    ]);
+
+    Logger.log('Added to Student_Master_DB: ' + studentId + ' (' + leadId + ')');
+  } catch(e) { Logger.log('addToStudentDB: ' + e); }
 }
 
 // ============ MENU ============
