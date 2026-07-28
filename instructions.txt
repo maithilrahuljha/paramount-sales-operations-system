@@ -1,1 +1,297 @@
+================================================================================
+⚓ CHANGES MADE v11 — Complete Feature Summary + Next Steps
+================================================================================
+
+
+================================================================================
+✅ FEATURE 1: ALL LEAD FIELDS ARE NOW EDITABLE (IMPLEMENTED)
+================================================================================
+
+WHAT WAS BUILT:
+
+  The edit modal now has INPUT FIELDS for all lead details:
+    • 👤 Name           (text input — editable)
+    • 📞 Phone          (text input — editable)
+    • 📧 Email          (text input — editable)
+    • 📚 Course         (text input — editable)
+    • 🏙️ City           (text input — editable)
+    • 👨‍💼 Counsellor     (text input — editable)
+    • 📅 Batch Month    (text input — editable)
+    • 🎓 Education      (text input — editable)
+    • 📊 Status         (buttons — clickable)
+    • 📝 Notes          (textarea — editable)
+
+  BEFORE: Modal showed read-only text. Staff could only change status.
+  AFTER:  Modal has input fields. Staff can correct any detail.
+
+HOW IT WORKS:
+
+  1. Counsellor clicks ✏️ Edit on a lead
+  2. Modal opens with all fields pre-filled with current values
+  3. Counsellor changes whatever needs updating:
+     • Fix a typo in the name
+     • Update phone number
+     • Reassign to different counsellor
+     • Change course interest
+     • Change batch month
+  4. Counsellor clicks 💾 Save Changes
+  5. Dashboard sends ALL field values to Apps Script:
+     { action: 'updateLead',
+       leadId: 'PMN-2026-0001',
+       status: 'Contacted',
+       notes: 'Updated phone number',
+       fields: '{"name":"John Doe","phone":"9999999999","course":"GP Rating",...}' }
+  6. Apps Script updates EVERY column in the main sheet
+  7. Dashboard refreshes with updated values
+
+  Save button enables when ANY field is changed (not just status/notes).
+
+FILES INVOLVED:
+  • dashboard_ui/index.html — input fields in modal
+  • dashboard_ui/style.css — .edit-grid, .edit-input styles
+  • dashboard_ui/app.js — enableSave() checks all fields for changes
+  • apps_script_backup/Code.gs — updateLead() parses "fields" JSON
+    and writes each value to the matching column
+
+DEPLOYMENT STATUS: ✅ Code is ready. Upload files + redeploy Apps Script.
+
+
+================================================================================
+✅ FEATURE 2: 🎓 ENROLLED STUDENTS BUTTON (IMPLEMENTED)
+================================================================================
+
+WHAT WAS BUILT:
+
+  New button in dashboard header: "🎓 Enrolled Students"
+
+  When clicked:
+  1. Opens a modal showing ALL leads with status = Enrolled or Completed
+  2. Table columns: Lead ID, Name, Phone, Email, Course, Batch, Counsellor, Status
+  3. "📋 Copy All to Clipboard" button copies data as tab-separated text
+
+  This gives managers a quick view of successful enrollments and a way
+  to export data for reports or manual Student_Master_DB entry.
+
+HOW THE COPY WORKS:
+
+  1. Counsellor/Manager clicks "🎓 Enrolled Students"
+  2. Sees the list of all enrolled students
+  3. Clicks "📋 Copy All to Clipboard"
+  4. System copies tab-separated data:
+     Lead_ID    Name    Phone    Email    Course    Batch    Counsellor    Status    City    Education
+     PMN-2026-0001    John Doe    9876543210    john@example.com    GP Rating    January    Counsellor 1    Enrolled    Mumbai    12th Pass
+     PMN-2026-0003    Jane Smith    9876543212    jane@example.com    Deck Cadet    March    Counsellor 2    Completed    Delhi    Graduate
+  5. Open ANY Google Sheet → click cell A1 → Ctrl+V → data fills perfectly
+
+  This is a TEMPORARY solution for Student DB management.
+  Feature 3 (below) replaces this with a proper form-based workflow.
+
+FILES INVOLVED:
+  • dashboard_ui/index.html — Enrolled Students modal HTML
+  • dashboard_ui/app.js — openStudentsModal(), copyStudentsToClipboard()
+
+DEPLOYMENT STATUS: ✅ Code is ready. Upload files.
+
+
+================================================================================
+✅ FEATURE 2B: AUTO Student_Master_DB ON ENROLLMENT (IMPLEMENTED)
+================================================================================
+
+WHAT WAS BUILT:
+
+  When a lead's status is changed to "Enrolled" or "Completed" via dashboard:
+
+  Apps Script automatically:
+  1. Creates Student_Master_DB tab if it doesn't exist
+  2. Generates Student_ID: STU-2026-0001 (auto-incremented)
+  3. Copies lead data to Student_Master_DB:
+     Student_ID | Lead_ID | Student_Name | Phone | Email |
+     Course_Enrolled | Enrollment_Date | City | Education |
+     Batch_Month | Counsellor | Remarks
+  4. Checks for duplicates (same Lead_ID won't be added twice)
+
+  This is the BASIC auto-population.
+  Feature 3 (below) adds fee details, document upload, and Drive folders.
+
+FILES INVOLVED:
+  • apps_script_backup/Code.gs — addToStudentDB() function
+
+DEPLOYMENT STATUS: ✅ Code is ready. Redeploy Apps Script as New Version.
+
+
+================================================================================
+🔧 FEATURE 3: ENROLLMENT FORM + DRIVE FOLDERS (PLANNED — NEXT STEP)
+================================================================================
+
+WHAT WILL BE BUILT:
+
+  A complete enrollment workflow where counsellors fill a Google Form
+  with fee details and upload documents. The system auto-creates a
+  Drive folder per student and organizes everything.
+
+  COUNSELLOR SEES:
+  1. Dashboard → Edit lead → change to "Enrolled" → Save
+  2. Alert: "✅ Enrolled! Fill enrollment form →" with clickable link
+  3. Google Form opens PRE-FILLED with: Lead ID, Name, Phone, Email, Course
+  4. Counsellor fills: Fee Amount, Due Date, Payment Mode
+  5. Counsellor uploads: Documents (ID proof, photo, certificates)
+  6. Clicks Submit — done!
+
+  SYSTEM DOES (automatically):
+  1. Saves data to Student_Master_DB sheet
+  2. Generates Enrollment_ID: ENR-2026-0001
+  3. Creates Drive folder: Student_Documents/ENR-2026-0001_John_Doe/
+  4. Moves uploaded documents into that folder
+  5. Writes folder URL back to the sheet
+
+  COUNSELLOR NEVER TOUCHES:
+  ❌ Google Sheets directly
+  ❌ Google Drive directly
+  ❌ Student_Master_DB sheet
+  Everything through Dashboard + Form.
+
+
+──────────────────────────────────────────
+STEP 1 (YOU DO): Create the Enrollment Form
+──────────────────────────────────────────
+
+1. Go to forms.google.com → + Blank
+2. Title: "Paramount Student Enrollment Form"
+3. Add these questions:
+
+   #   Question                     Type            Required
+   ────────────────────────────────────────────────────────────
+   1   Lead ID                      Short answer    Yes
+   2   Student Name                 Short answer    Yes
+   3   Phone Number                 Short answer    Yes
+   4   Email Address                Short answer    Yes
+   5   Course Enrolled              Dropdown        Yes
+       Options: GP Rating, Deck Cadet, Engine Cadet, ETO, Other
+   6   Batch Month                  Dropdown        Yes
+       Options: January through December
+   7   Total Fee Amount (₹)         Short answer    Yes
+   8   Fee Paid (₹)                 Short answer    Yes
+   9   Fee Due (₹)                  Short answer    No
+   10  Payment Due Date             Date            Yes
+   11  Payment Mode                 Dropdown        Yes
+       Options: Cash, UPI, Bank Transfer, Cheque, Online
+   12  Counsellor Name              Dropdown        Yes
+       Options: (your counsellor names)
+   13  Upload Documents             File upload     No
+       Allow: PDF, JPG, PNG | Max: 10 MB | Max files: 5
+   14  Additional Notes             Paragraph       No
+
+4. Link responses to a sheet:
+   Responses tab → Spreadsheet icon → Select existing → Lead_Register spreadsheet
+   (it creates a new tab — rename it to "Student_Master_DB")
+
+5. Get the form link:
+   Send → Link icon (🔗) → Copy
+
+Note: File upload requires responders to be signed into Google.
+Your counsellors use Workspace accounts, so this works automatically.
+
+
+──────────────────────────────────────────
+STEP 2 (YOU DO): Get Pre-Fill Entry IDs
+──────────────────────────────────────────
+
+This lets the dashboard open the form with Lead ID, Name, Phone, 
+Email, and Course already filled in.
+
+1. Open your enrollment form in EDIT mode
+2. Click the three dots menu (⋮) at top right
+3. Click "Get pre-filled link"
+4. Fill in DUMMY values:
+   Lead ID: TESTID
+   Student Name: TESTNAME
+   Phone Number: TESTPHONE
+   Email Address: TESTEMAIL
+   Course Enrolled: GP Rating
+5. Click "Get link" at bottom
+6. Copy the URL
+
+7. The URL looks like:
+   https://docs.google.com/forms/d/e/FORM_ID/viewform
+     ?usp=pp_url
+     &entry.111111111=TESTID
+     &entry.222222222=TESTNAME
+     &entry.333333333=TESTPHONE
+     &entry.444444444=TESTEMAIL
+     &entry.555555555=GP+Rating
+
+8. Write down the entry IDs:
+   Lead ID entry ID:     entry._______________
+   Name entry ID:        entry._______________
+   Phone entry ID:       entry._______________
+   Email entry ID:       entry._______________
+   Course entry ID:      entry._______________
+
+9. SHARE WITH ME:
+   • The form URL (the /viewform link)
+   • All 5 entry IDs from step 8
+
+
+──────────────────────────────────────────
+STEP 3 (I BUILD): Dashboard + Apps Script Integration
+──────────────────────────────────────────
+
+Once you share the form URL + entry IDs, I will update:
+
+  config.js:
+    enrollmentFormUrl: 'https://docs.google.com/forms/d/e/FORM_ID/viewform',
+    enrollmentEntryIds: {
+      leadId: '111111111',
+      name: '222222222',
+      phone: '333333333',
+      email: '444444444',
+      course: '555555555'
+    }
+
+  app.js:
+    When status → Enrolled, builds pre-filled URL:
+      https://...FORM_ID.../viewform?entry.111=PMN-2026-0001&entry.222=John+Doe&...
+    Opens in new tab automatically.
+
+  Code.gs:
+    New onFormSubmit trigger on Student_Master_DB tab:
+    • Generates Enrollment_ID (ENR-2026-XXXX)
+    • Creates Drive folder: Student_Documents/ENR-2026-0001_Student_Name/
+    • Moves uploaded files into the folder
+    • Writes folder URL to the sheet row
+
+
+================================================================================
+📋 COMPLETE STATUS
+================================================================================
+
+  ✅ Feature 1: Editable lead fields (name, phone, all details)
+     → Code ready. Upload files + redeploy.
+
+  ✅ Feature 2: 🎓 Enrolled Students button + clipboard copy
+     → Code ready. Upload files.
+
+  ✅ Feature 2B: Auto Student_Master_DB on enrollment
+     → Code ready. Redeploy Apps Script.
+
+  🔧 Feature 3: Enrollment form + Drive folders
+     → WAITING: You create the form (Step 1-2), share URL + entry IDs
+     → THEN: I build the integration (Step 3)
+
+
+================================================================================
+📁 FILES TO UPLOAD NOW (for Features 1, 2, 2B)
+================================================================================
+
+  1. dashboard_ui/index.html     (editable modal + enrolled students modal)
+  2. dashboard_ui/style.css      (edit-grid + edit-input styles)
+  3. dashboard_ui/app.js         (v11 — editable fields + students viewer)
+  4. apps_script_backup/Code.gs  (updateLead with fields + addToStudentDB)
+
+  THEN: Deploy → Manage deployments → Edit → New version → Deploy
+
+
+================================================================================
+                              END OF LOG
+================================================================================
 
