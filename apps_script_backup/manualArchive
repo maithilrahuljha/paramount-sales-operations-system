@@ -1,0 +1,144 @@
+/**
+ * ============================================================================
+ * Paramount Merchant Navy — Manual Archive Script
+ * ============================================================================
+ * PURPOSE:
+ *   Run this MANUALLY whenever you want to move Completed / Lost leads
+ *   out of the main Lead_Register (Form Responses 1) sheet.
+ *
+ * WHAT IT DOES:
+ *   1. Scans the MAIN sheet for rows where Status = Completed or Lost
+ *   2. Copies those rows to the monthly archive tab: Archived_YYYY_MM
+ *   3. Removes matching rows from Followup_Tracker
+ *   4. Deletes those rows from the MAIN sheet
+ *
+ * SAFE BEHAVIOR:
+ *   • Enrolled leads are NOT deleted by this script
+ *   • Completed / Lost are archived first, then deleted from main
+ *   • Archive rows get Archived_Date and Reason columns
+ *
+ * HOW TO RUN:
+ *   Apps Script editor → select function manualArchiveClosedLeads → Run
+ * ============================================================================
+ */
+
+function manualArchiveClosedLeads() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mainSheet = ss.getSheets()[0]; // Main sheet (Form Responses 1)
+  var cols = findColumns(mainSheet);
+
+  if (!cols.leadId) {
+    SpreadsheetApp.getUi().alert('❌ Lead_ID column not found in main sheet');
+    return;
+  }
+  if (!cols.status) {
+    SpreadsheetApp.getUi().alert('❌ Status column not found in main sheet');
+    return;
+  }
+
+  var last = mainSheet.getLastRow();
+  if (last <= 1) {
+    SpreadsheetApp.getUi().alert('ℹ️ No data rows found');
+    return;
+  }
+
+  var ui = SpreadsheetApp.getUi();
+  var confirm = ui.alert(
+    'Manual Archive',
+    'This will archive and delete all leads with Status = Completed or Lost from the main sheet.\n\nContinue?',
+    ui.ButtonSet.YES_NO
+  );
+  if (confirm !== ui.Button.YES) return;
+
+  var archived = 0;
+  var removedFromFollowup = 0;
+  var statusesToMove = ['Completed', 'Lost'];
+
+  // Process bottom-up because we delete rows
+  for (var r = last; r >= 2; r--) {
+    var status = String(mainSheet.getRange(r, cols.status).getValue()).trim();
+    if (statusesToMove.indexOf(status) === -1) continue;
+
+    var leadId = String(mainSheet.getRange(r, cols.leadId).getValue()).trim();
+
+    // 1) Copy to archive
+    copyToArchive(ss, mainSheet, r, status);
+    archived++;
+
+    // 2) Remove from followup tracker
+    if (leadId) {
+      var removed = removeFromFollowupManual(ss, leadId);
+      if (removed) removedFromFollowup++;
+    }
+
+    // 3) Delete from main sheet
+    mainSheet.deleteRow(r);
+  }
+
+  ui.alert(
+    '✅ Manual Archive Complete\n\n' +
+    'Archived rows: ' + archived + '\n' +
+    'Removed from Followup_Tracker: ' + removedFromFollowup + '\n\n' +
+    'Completed and Lost leads are now removed from the main sheet.'
+  );
+}
+
+/**
+ * Manual helper: remove a lead from Followup_Tracker by Lead_ID.
+ * Returns true if a row was removed, false otherwise.
+ */
+function removeFromFollowupManual(ss, leadId) {
+  try {
+    var fu = ss.getSheetByName('Followup_Tracker');
+    if (!fu) return false;
+
+    var last = fu.getLastRow();
+    if (last <= 1) return false;
+
+    var ids = fu.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = ids.length - 1; i >= 0; i--) {
+      if (String(ids[i][0]).trim() === String(leadId).trim()) {
+        fu.deleteRow(i + 2);
+        return true;
+      }
+    }
+  } catch (e) {
+    Logger.log('removeFromFollowupManual: ' + e);
+  }
+  return false;
+}
+
+/**
+ * Optional helper: preview how many rows would be archived without changing anything.
+ */
+function previewArchiveClosedLeads() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mainSheet = ss.getSheets()[0];
+  var cols = findColumns(mainSheet);
+
+  if (!cols.status) {
+    SpreadsheetApp.getUi().alert('❌ Status column not found');
+    return;
+  }
+
+  var last = mainSheet.getLastRow();
+  if (last <= 1) {
+    SpreadsheetApp.getUi().alert('ℹ️ No data rows found');
+    return;
+  }
+
+  var completed = 0;
+  var lost = 0;
+  for (var r = 2; r <= last; r++) {
+    var status = String(mainSheet.getRange(r, cols.status).getValue()).trim();
+    if (status === 'Completed') completed++;
+    if (status === 'Lost') lost++;
+  }
+
+  SpreadsheetApp.getUi().alert(
+    'Archive Preview\n\n' +
+    'Completed leads to archive: ' + completed + '\n' +
+    'Lost leads to archive: ' + lost + '\n' +
+    'Total rows to remove from main sheet: ' + (completed + lost)
+  );
+}
